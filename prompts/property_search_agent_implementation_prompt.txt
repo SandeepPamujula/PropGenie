@@ -1,0 +1,47 @@
+Design the project backlog for the PropGenie AI-powered real estate search assistant.
+
+Follow the instructions below.
+
+GENERAL INSTRUCTIONS
+
+1. Organize the work into milestones.
+2. Create a separate file for each milestone.
+3. Each file should contain:
+   - User stories
+   - Implementation tasks
+   - Acceptance criteria
+4. Indicate the completion status of each story when it is implemented.
+5. Use clear developer-ready tasks that can be implemented by engineering teams.
+6. Focus on architecture, backend, AI pipeline, and infrastructure tasks.
+
+FILE STRUCTURE
+
+Each milestone must be represented as a separate file with the following format:
+
+milestone_<number>_<name>.md
+
+
+USER STORY FORMAT
+
+Use the following structure for every story:
+
+Story ID: US-<number>
+Title: <Short description>
+
+User Story:
+As a <role>,
+I want <capability>,
+So that <benefit>.
+
+Tasks:
+- Task 1
+- Task 2
+- Task 3
+
+Acceptance Criteria:
+- Condition 1
+- Condition 2
+- Condition 3
+
+Status:
+Not Started | In Progress | Completed
