@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+langgraph
+langchain
+langchain-aws
+langfuse
+pymongo
+pydantic
+python-dotenv
+pytest
+mongomock
+ruff
+mypy
