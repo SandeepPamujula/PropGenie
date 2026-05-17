@@ -5,6 +5,7 @@
   `**Status:** In Progress`
 * Whenever you fully complete a User Story and satisfy all acceptance criteria, locate its definition in `docs/backlog/milestone_*.md` and update its status:
   `**Status:** Completed`
+* **Upon completing a User Story, append an "Implementation Summary" directly under the User Story's definition in the milestone backlog file.** This summary must clearly outline the design decisions, key files created/modified, and verification/testing steps taken.
 * Always keep the backlog documentation in sync with the actual state of the codebase.
 
 ## Backend Rules
