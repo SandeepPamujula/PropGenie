@@ -1,0 +1,8 @@
+pytest==8.2.2
+pytest-asyncio==0.23.7
+ruff==0.4.9
+mypy==1.10.0
+moto==5.0.9
+httpx==0.27.0
+mongomock==4.1.2
+setuptools

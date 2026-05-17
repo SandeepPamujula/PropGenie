@@ -37,7 +37,8 @@ So that I can navigate the codebase efficiently and each team can work independe
 - `.gitignore` prevents `node_modules/`, `__pycache__/`, `.venv/`, `out/`, and `.env` from being committed
 - `backend/server.py` starts with `uvicorn server:app --reload --port 8000` and returns 200 on `/api/health`
 
-**Status:** Not Started
+**Status:** Completed
+
 
 ---
 
@@ -61,7 +62,7 @@ So that I can write consistent, high-quality code from day one.
 - `pytest tests/` runs and passes (at least one placeholder test)
 - `mypy backend/ --ignore-missing-imports` returns no errors
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 

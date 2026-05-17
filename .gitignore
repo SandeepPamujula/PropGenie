@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+.venv/
+dist/
+.env
+*.pyc
+
+# Node
+node_modules/
+.next/
+out/
+.DS_Store
+
+# Misc
+.gemini/
+*.log
