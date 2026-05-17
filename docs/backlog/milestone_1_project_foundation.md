@@ -148,4 +148,10 @@ So that the Query Builder Agent can construct deep-link URLs without hardcoded l
 - Adding a new portal requires only a new YAML file — no code changes
 - Sample URLs generated from the config match real portal URL patterns
 
-**Status:** Not Started
+**Status:** Completed
+
+**Implementation Summary:**
+- **Dynamic Adapters**: Created static YAML configurations for both [nobroker.yaml](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/portal_configs/nobroker.yaml) and [99acres.yaml](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/portal_configs/99acres.yaml). These capture core domain settings, city slug mappings for 6 major Indian cities, parameter conversions, and sample URLs.
+- **Pydantic Validation**: Built the shared validation schema [portal_config.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/models/portal_config.py) defining `PortalConfig` and `ParameterMapping` with a robust `generate_url()` method.
+- **Config Loader**: Coded [config_loader.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/utils/config_loader.py) to dynamically read, parse, and validate all portal YAML configurations from `portal_configs/` without code changes when a new portal is added.
+- **Unit Tests**: Developed a full test suite [test_config_loader.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_config_loader.py) verifying flawless Pydantic validation, URL format compilation, robust query parameter checks, and validation error handling under edge-cases. All tests pass successfully.

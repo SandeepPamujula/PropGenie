@@ -1,0 +1,79 @@
+portal_id: "nobroker"
+portal_name: "NoBroker"
+base_url: "https://www.nobroker.in"
+
+# URL templates for building the main search path
+rent_url_template: "{base_url}/property/rent/{city_slug}/{city_capitalized}"
+buy_url_template: "{base_url}/property/sale/{city_slug}/{city_capitalized}"
+
+# Parameter mappings for rent searches
+rent_params:
+  bhk:
+    name: "type"
+    value_mapping:
+      "1": "BHK1"
+      "2": "BHK2"
+      "3": "BHK3"
+      "4": "BHK4"
+      "4+": "BHK4PLUS"
+    delimiter: ","
+  price_range:
+    name: "rent"
+    delimiter: ","
+  furnishing:
+    name: "furnishing"
+    value_mapping:
+      fully_furnished: "FULLY_FURNISHED"
+      semi_furnished: "SEMI_FURNISHED"
+      unfurnished: "UNFURNISHED"
+  building_type:
+    name: "buildingType"
+    value_mapping:
+      apartment: "AP"
+      independent: "IH"
+      gated_community: "GC"
+    delimiter: ","
+
+# Parameter mappings for buy/sale searches
+buy_params:
+  bhk:
+    name: "type"
+    value_mapping:
+      "1": "BHK1"
+      "2": "BHK2"
+      "3": "BHK3"
+      "4": "BHK4"
+      "4+": "BHK4PLUS"
+    delimiter: ","
+  price_range:
+    name: "price"
+    delimiter: ","
+  furnishing:
+    name: "furnishing"
+    value_mapping:
+      fully_furnished: "FULLY_FURNISHED"
+      semi_furnished: "SEMI_FURNISHED"
+      unfurnished: "UNFURNISHED"
+  building_type:
+    name: "buildingType"
+    value_mapping:
+      apartment: "AP"
+      independent: "IH"
+      gated_community: "GC"
+    delimiter: ","
+
+# Standard lowercase city name mapped to NoBroker's city slug
+city_slug_map:
+  bangalore: "bangalore"
+  mumbai: "mumbai"
+  pune: "pune"
+  chennai: "chennai"
+  hyderabad: "hyderabad"
+  delhi: "delhi"
+
+# Reference URLs matching real portal outputs
+example_urls:
+  rent_default: "https://www.nobroker.in/property/rent/bangalore/Bangalore"
+  rent_with_filters: "https://www.nobroker.in/property/rent/bangalore/Bangalore?type=BHK2,BHK3&rent=15000,30000&furnishing=FULLY_FURNISHED"
+  buy_default: "https://www.nobroker.in/property/sale/mumbai/Mumbai"
+  buy_with_filters: "https://www.nobroker.in/property/sale/mumbai/Mumbai?type=BHK3&price=10000000,20000000"
