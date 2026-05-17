@@ -21,9 +21,10 @@ This file contains commands and rules for development in the PropGenie mono-repo
 ## Agent & Backlog Management Rules
 
 ### 1. Milestone Tracking & Status Updates (CRITICAL)
-Whenever you start working on a User Story or complete it, you **MUST** update its status in the corresponding milestone documentation file under `docs/backlog/`:
+Whenever you start working on a User Story or complete it, you **MUST** update its status and add details in the corresponding milestone documentation file under `docs/backlog/`:
 * **In Progress:** When you begin implementation of a User Story, change its status in the markdown file to `**Status:** In Progress`.
 * **Completed:** When a User Story is fully implemented and meets all acceptance criteria, change its status to `**Status:** Completed`.
+* **Implementation Summary:** Upon completing a User Story, append an "Implementation Summary" section directly under the story's definition in the milestone backlog file. The summary must clearly outline the design decisions, key files created/modified, and verification/testing steps taken.
 * Keep the milestone files updated as the single source of truth for project progress.
 
 ### 2. Code Quality & Standards
