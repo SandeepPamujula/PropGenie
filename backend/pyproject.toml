@@ -1,0 +1,43 @@
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Enable Pyflakes (F) and a subset of the pycodestyle (E) codes by default.
+select = [
+    "F",    # Pyflakes
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "I",    # isort (import sorting)
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+]
+ignore = []
+
+# Configure isort
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-single-line = false
+known-first-party = ["agents", "models", "db", "utils", "observability", "portal_configs"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+show_error_codes = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = [
+    "langgraph.*",
+    "langchain.*",
+    "langchain_aws.*",
+    "boto3.*",
+    "botocore.*",
+    "pymongo.*",
+    "mongomock.*",
+    "langfuse.*",
+    "motor.*",
+    "moto.*"
+]
+ignore_missing_imports = true

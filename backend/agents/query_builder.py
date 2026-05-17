@@ -1,6 +1,9 @@
+from typing import Any
+
+
 # Query Builder Agent Stub
-def query_builder_node(state):
+def query_builder_node(state: dict[str, Any]) -> dict[str, Any]:
     """
-    Generates portal-specific deep-link URLs.
+    Constructs search queries for target portals.
     """
     return state

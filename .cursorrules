@@ -1,0 +1,21 @@
+# PropGenie Agent Rules (.cursorrules)
+
+## Backlog & Milestone Tracking Rules (CRITICAL)
+* Whenever you begin working on a User Story, immediately locate its definition in `docs/backlog/milestone_*.md` and update its status:
+  `**Status:** In Progress`
+* Whenever you fully complete a User Story and satisfy all acceptance criteria, locate its definition in `docs/backlog/milestone_*.md` and update its status:
+  `**Status:** Completed`
+* Always keep the backlog documentation in sync with the actual state of the codebase.
+
+## Backend Rules
+* Python 3.12+ features should be preferred.
+* Use strict type hinting.
+* Pydantic schemas must be defined in `backend/models/`.
+* Agent nodes must be defined inside `backend/agents/`.
+* All agent invocations, tokens, and latency must be tracked via Langfuse spans.
+* Avoid direct AWS credentials in the code; use IAM roles.
+
+## Frontend Rules
+* Next.js using static export (`output: 'export'`).
+* Ensure all styling follows rich premium styling as defined in the system.
+* Do not use the `app/api` directory to prevent routing conflicts.

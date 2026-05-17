@@ -12,10 +12,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     return {"message": "PropGenie FastAPI Stub"}
+
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

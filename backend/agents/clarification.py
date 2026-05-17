@@ -1,6 +1,9 @@
+from typing import Any
+
+
 # Clarification Agent Stub
-def clarification_node(state):
+def clarification_node(state: dict[str, Any]) -> dict[str, Any]:
     """
-    Generates a clarifying question if entities are missing.
+    Asks clarifying questions if user query is ambiguous.
     """
     return state
