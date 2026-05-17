@@ -1,0 +1,69 @@
+portal_id: "99acres"
+portal_name: "99acres"
+base_url: "https://www.99acres.com"
+
+# URL templates for building the main search path
+rent_url_template: "{base_url}/search/property/rent/{city_slug}"
+buy_url_template: "{base_url}/search/property/buy/{city_slug}"
+
+# Parameter mappings for rent searches
+rent_params:
+  bhk:
+    name: "bedroom"
+    value_mapping:
+      "1": "1"
+      "2": "2"
+      "3": "3"
+      "4": "4"
+      "4+": "5"
+    delimiter: ","
+  price_min:
+    name: "budget_min"
+  price_max:
+    name: "budget_max"
+  furnishing:
+    name: "furnishing"
+    value_mapping:
+      fully_furnished: "1"
+      semi_furnished: "2"
+      unfurnished: "3"
+    delimiter: ","
+
+# Parameter mappings for buy/sale searches
+buy_params:
+  bhk:
+    name: "bedroom"
+    value_mapping:
+      "1": "1"
+      "2": "2"
+      "3": "3"
+      "4": "4"
+      "4+": "5"
+    delimiter: ","
+  price_min:
+    name: "budget_min"
+  price_max:
+    name: "budget_max"
+  furnishing:
+    name: "furnishing"
+    value_mapping:
+      fully_furnished: "1"
+      semi_furnished: "2"
+      unfurnished: "3"
+    delimiter: ","
+
+# Standard lowercase city name mapped to 99acres' city slug
+city_slug_map:
+  bangalore: "bangalore"
+  mumbai: "mumbai"
+  pune: "pune"
+  chennai: "chennai"
+  hyderabad: "hyderabad"
+  delhi: "delhi-ncr"
+
+# Reference URLs matching real portal outputs
+example_urls:
+  rent_default: "https://www.99acres.com/search/property/rent/bangalore"
+  rent_with_filters: "https://www.99acres.com/search/property/rent/bangalore?bedroom=2,3&budget_min=15000&budget_max=30000&furnishing=1"
+  buy_default: "https://www.99acres.com/search/property/buy/mumbai"
+  buy_with_filters: "https://www.99acres.com/search/property/buy/mumbai?bedroom=3&budget_min=10000000&budget_max=20000000"
