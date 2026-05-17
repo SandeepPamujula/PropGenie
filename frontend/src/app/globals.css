@@ -1,26 +1,69 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #09090b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  /* Brand colors from CLAUDE.md */
+  --color-brand-50: #f0f9ff;
+  --color-brand-500: #0ea5e9;
+  --color-brand-900: #0c4a6e;
+
+  /* Portal colors from CLAUDE.md */
+  --color-portal-nobroker: #e63946;
+  --color-portal-acres: #f4a261;
+  --color-portal-magicbricks: #2a9d8f;
+  --color-portal-housing: #457b9d;
+  --color-portal-squareyards: #6a4c93;
+
+  --font-sans: var(--font-inter);
+
+  /* Animations from CLAUDE.md */
+  --animate-typing: typing 1.2s steps(3) infinite;
+  --animate-fade-in: fadeIn 0.2s ease-out;
+
+  @keyframes typing {
+    0% {
+      content: '.';
+    }
+    33% {
+      content: '..';
+    }
+    66% {
+      content: '...';
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #09090b;
+    --foreground: #fafafa;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    var(--font-sans),
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
