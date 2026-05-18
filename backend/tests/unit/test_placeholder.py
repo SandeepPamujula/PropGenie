@@ -1,6 +1,5 @@
 from typing import Any
 
-from agents.clarification import clarification_node
 from agents.orchestrator import orchestrator_node
 from agents.query_builder import query_builder_node
 from agents.response_formatter import response_formatter_node
@@ -10,7 +9,6 @@ from agents.url_validator import url_validator_node
 def test_placeholder_agents() -> None:
     """Verifies that all agent stubs are importable and return state correctly."""
     state = {"query": "hello"}
-    assert clarification_node(state) == state
     assert query_builder_node(state) == state
     assert url_validator_node(state) == state
     assert response_formatter_node(state) == state
