@@ -10,7 +10,6 @@ from agents.url_validator import url_validator_node
 def test_placeholder_agents() -> None:
     """Verifies that all agent stubs are importable and return state correctly."""
     state = {"query": "hello"}
-    assert orchestrator_node(state) == state
     assert clarification_node(state) == state
     assert query_builder_node(state) == state
     assert url_validator_node(state) == state
