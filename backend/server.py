@@ -1,7 +1,13 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+import uuid
+from datetime import datetime, timezone
 
-app = FastAPI()
+from fastapi import FastAPI, Header, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from graph import generate_graph_sse
+from pydantic import BaseModel
+
+app = FastAPI(title="PropGenie Backend Service", version="1.0.0")
 
 # Enable CORS for local Next.js development
 app.add_middleware(
@@ -13,9 +19,78 @@ app.add_middleware(
 )
 
 
+class ChatRequest(BaseModel):
+    """
+    Validation schema for the chat request payload.
+    """
+
+    message: str
+
+
 @app.get("/")
 async def root() -> dict[str, str]:
-    return {"message": "PropGenie FastAPI Stub"}
+    """
+    Welcome endpoint returning basic API metadata.
+    """
+    return {
+        "message": "Welcome to the PropGenie Backend API",
+        "status": "active",
+    }
+
+
+@app.get("/api/health")
+async def health() -> dict[str, str]:
+    """
+    API Health check endpoint conforming to the system API contract.
+    """
+    return {
+        "status": "healthy",
+        "version": "1.0.0",
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+
+
+@app.post("/api/chat")
+async def chat(
+    request: Request,
+    chat_request: ChatRequest,
+    x_session_id: str | None = Header(default=None),
+) -> StreamingResponse:
+    """
+    Chat search endpoint. Invokes the agent pipeline and streams
+    updates back to the user via Server-Sent Events (SSE).
+    """
+    # Extract session ID or generate a new unique identifier
+    session_id = x_session_id or str(uuid.uuid4())
+
+    # Extract client IP address
+    # 1. CloudFront-Viewer-Address (for production geolocation/rate-limiting)
+    # 2. X-Forwarded-For (standard reverse proxies)
+    # 3. Client Host (local development fallback)
+    cf_ip = request.headers.get("cloudfront-viewer-address")
+    x_forwarded = request.headers.get("x-forwarded-for")
+
+    if cf_ip:
+        ip = cf_ip
+    elif x_forwarded:
+        ip = x_forwarded.split(",")[0].strip()
+    else:
+        ip = request.client.host if request.client else "127.0.0.1"
+
+    # Invoke the shared agent graph generator
+    sse_generator = generate_graph_sse(session_id, ip, chat_request.message)
+
+    # Return StreamingResponse with SSE headers
+    return StreamingResponse(
+        sse_generator,
+        media_type="text/event-stream",
+        headers={
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Session-ID": session_id,
+        },
+    )
 
 
 if __name__ == "__main__":
