@@ -14,9 +14,11 @@
   --color-brand-500: #0ea5e9;
   --color-brand-900: #0c4a6e;
 
-  /* Portal colors from CLAUDE.md */
+  /* Portal colors from CLAUDE.md and US specifications */
   --color-portal-nobroker: #e63946;
+  --color-portal-nobroker-green: #10b981;
   --color-portal-acres: #f4a261;
+  --color-portal-acres-blue: #0284c7;
   --color-portal-magicbricks: #2a9d8f;
   --color-portal-housing: #457b9d;
   --color-portal-squareyards: #6a4c93;
@@ -26,6 +28,8 @@
   /* Animations from CLAUDE.md */
   --animate-typing: typing 1.2s steps(3) infinite;
   --animate-fade-in: fadeIn 0.2s ease-out;
+  --animate-pulse-slow: pulseSlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer: shimmer 1.5s infinite linear;
 
   @keyframes typing {
     0% {
@@ -42,11 +46,32 @@
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(5px);
+      transform: translateY(6px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes pulseSlow {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(0.96);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
     }
   }
 }
@@ -58,6 +83,22 @@
   }
 }
 
+/* Custom premium utility class for glassmorphism card rendering */
+@utility glass-card {
+  background-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(244, 244, 245, 0.6);
+  box-shadow: 0 8px 32px 0 rgba(9, 9, 11, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  @media (prefers-color-scheme: dark) {
+    background-color: rgba(18, 18, 23, 0.6);
+    border: 1px solid rgba(63, 63, 70, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -66,4 +107,33 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
+  overflow-x: hidden;
+}
+
+/* Scrollbar customization for a premium, minimal aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(161, 161, 170, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 170, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: rgba(63, 63, 70, 0.4);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(63, 63, 70, 0.6);
+  }
 }
