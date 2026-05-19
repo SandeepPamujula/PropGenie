@@ -93,11 +93,14 @@ def test_url_validator_head_failure_and_timeout(mock_check_liveness: MagicMock) 
     """
     # Mock: First URL returns 404, second URL suffers a network timeout (returns None, error),
     # and third URL returns 200 OK.
-    mock_check_liveness.side_effect = [
-        (404, "Not Found"),
-        (None, "Connection Timeout"),
-        (200, None)
-    ]
+    def side_effect_fn(url, *args, **kwargs):
+        if "Indiranagar" in url:
+            return (404, "Not Found")
+        elif "99acres" in url:
+            return (None, "Connection Timeout")
+        else:
+            return (200, None)
+    mock_check_liveness.side_effect = side_effect_fn
 
     state = get_initial_state("session-val-liveness", "127.0.0.1")
     state["intent"] = "buy"
