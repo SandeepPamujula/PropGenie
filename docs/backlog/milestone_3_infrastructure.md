@@ -86,7 +86,7 @@ So that operational issues are detected and alerted on promptly.
 - Metric filters parse Lambda logs
 - Alarms trigger on defined thresholds
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -108,4 +108,4 @@ So that a single `terraform apply` provisions the entire stack.
 - `terraform plan` succeeds for dev and prod
 - All module outputs are properly wired
 
-**Status:** Not Started
+**Status:** Completed

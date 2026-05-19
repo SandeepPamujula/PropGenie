@@ -55,4 +55,13 @@ module "frontend" {
   price_class         = var.cloudfront_price_class
 }
 
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  environment         = var.environment
+  agent_function_name = module.lambda.agent_function_name
+  alarm_email         = var.alarm_email
+}
+
+
 

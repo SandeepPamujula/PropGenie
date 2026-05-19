@@ -61,4 +61,10 @@ variable "cloudfront_price_class" {
   description = "The price class for the CloudFront distribution (e.g., PriceClass_100, PriceClass_200, PriceClass_All)"
 }
 
+variable "alarm_email" {
+  type        = string
+  description = "The email address to receive CloudWatch alarms"
+}
+
+
 

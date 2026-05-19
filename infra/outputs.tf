@@ -46,4 +46,10 @@ output "distribution_id" {
   description = "The ID of the CloudFront distribution"
 }
 
+output "alarm_topic_arn" {
+  value       = module.monitoring.alarm_topic_arn
+  description = "The ARN of the SNS topic for alarm notifications"
+}
+
+
 

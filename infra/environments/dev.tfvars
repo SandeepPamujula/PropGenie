@@ -8,5 +8,7 @@ langfuse_secret_key             = "sk-lf-dummy-dev"
 langfuse_public_key             = "pk-lf-dummy-dev"
 langfuse_base_url               = "https://cloud.langfuse.com"
 cloudfront_price_class          = "PriceClass_200"
+alarm_email                     = "dev-alerts@propgenie.com"
+
 
 
