@@ -27,7 +27,7 @@ So that the backend runtime is provisioned securely and supports SSE streaming v
 - Lambda Function URL is created for the Agent function
 - Environment variables are set correctly from Terraform variables
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -56,7 +56,7 @@ So that the frontend is globally distributed and API requests are proxied throug
 - `CloudFront-Viewer-Address` header is forwarded to the Lambda origin (used for rate limiting in the handler)
 - SPA routing works (direct URL access to any path serves `index.html`)
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -86,7 +86,7 @@ So that operational issues are detected and alerted on promptly.
 - Metric filters parse Lambda logs
 - Alarms trigger on defined thresholds
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -108,4 +108,4 @@ So that a single `terraform apply` provisions the entire stack.
 - `terraform plan` succeeds for dev and prod
 - All module outputs are properly wired
 
-**Status:** Not Started
+**Status:** Completed
