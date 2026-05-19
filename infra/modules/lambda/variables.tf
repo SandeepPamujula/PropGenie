@@ -3,18 +3,6 @@ variable "environment" {
   description = "The target deployment environment (e.g. dev, prod)"
 }
 
-variable "project_name" {
-  type        = string
-  default     = "propgenie"
-  description = "The name of the project"
-}
-
-variable "aws_region" {
-  type        = string
-  default     = "ap-south-1"
-  description = "The AWS region to deploy resources in"
-}
-
 variable "lambda_memory" {
   type        = number
   description = "Amount of memory in MB to allocate to the Lambda function"
@@ -22,7 +10,6 @@ variable "lambda_memory" {
 
 variable "lambda_timeout" {
   type        = number
-  default     = 60
   description = "Maximum time in seconds the Lambda function can run"
 }
 
@@ -46,7 +33,6 @@ variable "langfuse_public_key" {
 
 variable "langfuse_base_url" {
   type        = string
-  default     = "https://cloud.langfuse.com"
   description = "Langfuse Base/Host URL"
 }
 
@@ -55,3 +41,8 @@ variable "reserved_concurrent_executions" {
   description = "Amount of reserved concurrent executions for this Lambda function"
 }
 
+variable "cloudfront_distribution_arn" {
+  type        = string
+  default     = null
+  description = "Optional ARN of the CloudFront distribution allowed to invoke the Lambda Function URL"
+}
