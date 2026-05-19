@@ -46,3 +46,13 @@ module "lambda" {
   reserved_concurrent_executions = var.reserved_concurrent_executions
 }
 
+module "frontend" {
+  source = "./modules/frontend"
+
+  environment         = var.environment
+  agent_function_url  = module.lambda.agent_function_url
+  agent_function_name = module.lambda.agent_function_name
+  price_class         = var.cloudfront_price_class
+}
+
+

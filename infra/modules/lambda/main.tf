@@ -119,13 +119,3 @@ resource "aws_lambda_function_url" "agent_url" {
   invoke_mode        = "RESPONSE_STREAM"
 }
 
-# Grant lambda:InvokeFunctionUrl to CloudFront OAC
-resource "aws_lambda_permission" "allow_cloudfront" {
-  count                  = var.cloudfront_distribution_arn != null ? 1 : 0
-  statement_id           = "AllowCloudFrontInvoke"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.agent.function_name
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = var.cloudfront_distribution_arn
-  function_url_auth_type = "AWS_IAM"
-}

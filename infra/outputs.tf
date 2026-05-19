@@ -31,3 +31,19 @@ output "agent_function_name" {
   description = "The name of the agent Lambda function"
 }
 
+output "cloudfront_domain" {
+  value       = module.frontend.cloudfront_domain
+  description = "The domain name of the CloudFront distribution"
+}
+
+output "s3_bucket_name" {
+  value       = module.frontend.s3_bucket_name
+  description = "The name of the S3 bucket hosting static assets"
+}
+
+output "distribution_id" {
+  value       = module.frontend.distribution_id
+  description = "The ID of the CloudFront distribution"
+}
+
+

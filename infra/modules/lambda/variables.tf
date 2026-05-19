@@ -41,8 +41,3 @@ variable "reserved_concurrent_executions" {
   description = "Amount of reserved concurrent executions for this Lambda function"
 }
 
-variable "cloudfront_distribution_arn" {
-  type        = string
-  default     = null
-  description = "Optional ARN of the CloudFront distribution allowed to invoke the Lambda Function URL"
-}

@@ -56,7 +56,7 @@ So that the frontend is globally distributed and API requests are proxied throug
 - `CloudFront-Viewer-Address` header is forwarded to the Lambda origin (used for rate limiting in the handler)
 - SPA routing works (direct URL access to any path serves `index.html`)
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 

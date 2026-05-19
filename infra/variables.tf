@@ -55,3 +55,10 @@ variable "reserved_concurrent_executions" {
   description = "Amount of reserved concurrent executions for this Lambda function"
 }
 
+variable "cloudfront_price_class" {
+  type        = string
+  default     = "PriceClass_100"
+  description = "The price class for the CloudFront distribution (e.g., PriceClass_100, PriceClass_200, PriceClass_All)"
+}
+
+
