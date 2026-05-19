@@ -57,7 +57,8 @@ describe('ChatInput', () => {
     render(<ChatInput value="some message" onChange={jest.fn()} onSubmit={handleSubmit} />)
 
     const textarea = screen.getByRole('textbox')
-    await userEvent.type(textarea, '{shift}{enter}')
+    textarea.focus()
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}')
     expect(handleSubmit).not.toHaveBeenCalled()
   })
 })
