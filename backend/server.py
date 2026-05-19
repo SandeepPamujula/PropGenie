@@ -1,5 +1,9 @@
+import os
 import uuid
 from datetime import datetime, timezone
+
+from dotenv import load_dotenv
+load_dotenv()
 
 from fastapi import FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware

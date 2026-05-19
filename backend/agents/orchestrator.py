@@ -147,10 +147,12 @@ def orchestrator_node(state: AgentState) -> dict[str, Any]:
             messages_for_llm.append(AIMessage(content=content))
             
     try:
-        # Initialize AWS Bedrock LLM Client
+        import os
+        model_id = os.environ.get("BEDROCK_MODEL_ID", "us.meta.llama3-1-70b-instruct-v1:0")
+        region_name = os.environ.get("AWS_REGION", "us-east-1")
         llm = ChatBedrock(  # type: ignore[call-arg]
-            model_id="us.meta.llama3-1-70b-instruct-v1:0",
-            region_name="us-east-1",
+            model_id=model_id,
+            region_name=region_name,
             model_kwargs={"temperature": 0.0}
         )
         

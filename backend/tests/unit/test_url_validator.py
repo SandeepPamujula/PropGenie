@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import MagicMock, patch
 import pytest
 from agents.url_validator import url_validator_node
@@ -93,7 +94,7 @@ def test_url_validator_head_failure_and_timeout(mock_check_liveness: MagicMock) 
     """
     # Mock: First URL returns 404, second URL suffers a network timeout (returns None, error),
     # and third URL returns 200 OK.
-    def side_effect_fn(url, *args, **kwargs):
+    def side_effect_fn(url: str, *args: Any, **kwargs: Any) -> tuple[Any, Any]:
         if "Indiranagar" in url:
             return (404, "Not Found")
         elif "99acres" in url:
