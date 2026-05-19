@@ -109,7 +109,7 @@ So that I know the system is working and can follow its progress.
 - Connection errors display a retry button
 - Stream is properly closed after receiving a `done` event
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
