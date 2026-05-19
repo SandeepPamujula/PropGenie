@@ -7,26 +7,75 @@ from agents.orchestrator import orchestrator_node
 from agents.query_builder import query_builder_node
 from agents.response_formatter import response_formatter_node
 from agents.url_validator import url_validator_node
+from db.session_manager import create_session, get_session, update_session
 from langgraph.graph import END, StateGraph
 from models.state import AgentState, get_initial_state
 
 
 def restore_state(state: AgentState) -> dict[str, Any]:
     """
-    Graph node that restores/initializes session state.
-    In US-12, this will load from MongoDB.
+    Graph node that restores/initializes session state from MongoDB.
     """
     print("[Graph Node] restore_state executed")
-    return {"session_id": state.get("session_id", "")}
+    session_id = state.get("session_id", "")
+    if not session_id:
+        return {"session_id": ""}
+
+    session = get_session(session_id)
+    if session:
+        # Restore state fields from the stored MongoDB document
+        context = session.get("context", {})
+        graph_state = session.get("graph_state", {})
+
+        # Merge messages: append incoming message(s) if not already present
+        stored_messages = list(session.get("messages", []))
+        incoming_messages = state.get("messages", [])
+
+        for msg in incoming_messages:
+            # Check if this exact message is already in stored_messages to avoid duplicates
+            if not any(
+                m.get("content") == msg.get("content") and m.get("ts") == msg.get("ts")
+                for m in stored_messages
+            ):
+                stored_messages.append(msg)
+
+        return {
+            "intent": context.get("intent"),
+            "city": context.get("city"),
+            "location_anchor": context.get("location_anchor"),
+            "property_type": context.get("property_type"),
+            "bhk": context.get("bhk"),
+            "budget_min": context.get("budget_min"),
+            "budget_max": context.get("budget_max"),
+            "radius_km": context.get("radius_km"),
+            "clarification_round": session.get("clarification_round", 0),
+            "pending_fields": graph_state.get("pending_fields", []),
+            "messages": stored_messages,
+            "generated_urls": graph_state.get("generated_urls", []),
+            "validated_urls": graph_state.get("validated_urls", []),
+            "search_meta": graph_state.get("search_meta"),
+            "error": graph_state.get("error"),
+            "proceed_with_defaults": graph_state.get("proceed_with_defaults"),
+        }
+    else:
+        # Create session if it does not exist
+        ip = state.get("ip", "")
+        create_session(session_id, ip)
+        update_session(session_id, state)
+        return {"session_id": session_id}
 
 
 def save_state(state: AgentState) -> dict[str, Any]:
     """
-    Graph node that saves/persists session state.
-    In US-12, this will save to MongoDB.
+    Graph node that saves/persists session state to MongoDB.
     """
     print("[Graph Node] save_state executed")
-    return {"session_id": state.get("session_id", "")}
+    session_id = state.get("session_id", "")
+    if session_id:
+        update_session(session_id, state)
+    return {"session_id": session_id}
+
+
 
 
 def route_orchestrator(state: AgentState) -> str:
@@ -223,14 +272,23 @@ def generate_graph_sse(
             if url not in [v.get("url") for v in validated]
         ]
 
-        yield f"event: search_meta\ndata: {json.dumps({
-            'type': 'search_meta',
-            'portals_searched': len(generated),
-            'portals_returned': len(validated),
-            'portals_dropped': dropped,
-            'clarification_rounds': final_state.get('clarification_round', 0),
-            'defaults_applied': ['radius_km: 4'] if final_state.get('radius_km') is None else []
-        })}\n\n"
+        search_meta = final_state.get("search_meta")
+        if not search_meta:
+            defaults = []
+            if final_state.get("radius_km") == 4:
+                defaults.append("radius_km: 4")
+            if final_state.get("budget_min") == 0:
+                defaults.append("budget_min: 0")
+            search_meta = {
+                'type': 'search_meta',
+                'portals_searched': len(generated),
+                'portals_returned': len(validated),
+                'portals_dropped': dropped,
+                'clarification_rounds': final_state.get('clarification_round', 0),
+                'defaults_applied': defaults
+            }
+        
+        yield f"event: search_meta\ndata: {json.dumps(search_meta)}\n\n"
 
         yield f"event: done\ndata: {json.dumps({
             'type': 'done',

@@ -25,6 +25,7 @@ class AgentState(TypedDict):
     validated_urls: list[dict[str, Any]]
     search_meta: Optional[dict[str, Any]]
     error: Optional[str]
+    proceed_with_defaults: Optional[bool]
 
 
 def get_initial_state(session_id: str, ip: str) -> AgentState:
@@ -49,4 +50,5 @@ def get_initial_state(session_id: str, ip: str) -> AgentState:
         "validated_urls": [],
         "search_meta": None,
         "error": None,
+        "proceed_with_defaults": None,
     }

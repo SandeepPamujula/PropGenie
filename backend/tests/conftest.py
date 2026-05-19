@@ -167,3 +167,15 @@ def mock_chat_bedrock() -> Any:
         mock_instance.invoke.side_effect = mock_invoke
         yield mock_class
 
+
+@pytest.fixture(autouse=True)
+def auto_mock_db_client(mock_mongo_client: Any) -> Any:
+    """
+    Automatically configures the DB connection client to use mock_mongo_client.
+    """
+    from db.connection import set_db_client
+    set_db_client(mock_mongo_client)
+    yield mock_mongo_client
+    set_db_client(None)
+
+

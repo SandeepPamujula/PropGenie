@@ -127,7 +127,22 @@ So that I can progressively refine my search without being overwhelmed by a form
 - The default-applied response includes a user-facing note
 - No clarification is asked about furnishing level, floor preference, or amenities (out of scope for v1)
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Prioritized Question Flow**: Designed an instruction-dense natural language system prompt for `ChatBedrock` leveraging Bedrock Llama 3.1 70B (`us.meta.llama3-1-70b-instruct-v1:0`). It strictly prioritizes queries in the order of `intent → location/city → property type → BHK (rentals) → budget → radius` and ensures exactly one conversational question is asked per turn.
+  - **Conversational Context**: Fed the entire message history and currently resolved fields into the model to phrase highly contextual, human-like questions that acknowledge previously stated criteria.
+  - **3-Round Breach Fallback**: Implemented robust 3-round breach fallback rules inside `clarification_node` (complementing the graph's `route_orchestrator`). It automatically populates default search criteria (unlimited budget, 4 km radius, open BHK configuration), appends a friendly explanation note to the user conversation history, sets `proceed_with_defaults = True`, and clears pending fields to allow execution to proceed.
+  - **Observability Tracing**: Instrumenting every invocation with Langfuse trace observation, registering specific sessions, users, and tags (`["propgenie", "clarification"]`).
+- **Key Files Created/Modified**:
+  - [clarification.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/clarification.py): Fully implemented the clarification agent node logic with fallback defaults, question generation, and Langfuse tracing.
+  - [state.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/models/state.py): Updated the shared `AgentState` schema and initialization helper to support `proceed_with_defaults`.
+  - [test_clarification.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_clarification.py): Created comprehensive unit tests validating single-question generation, conversational prioritizing, 3-round breach defaults, and exception fallback handling.
+  - [test_placeholder.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_placeholder.py): Cleaned up stub verification assertion.
+- **Verification/Testing Steps**:
+  - Validated type safety using MyPy across all source files, passing with zero issues.
+  - Executed all 38 backend unit tests via PyTest, achieving 100% pass rates.
 
 ---
 
@@ -156,7 +171,22 @@ So that I can click through and view matching properties without manually search
 - If a city is not in a portal's slug map, that portal is skipped gracefully
 - Location mapping produces reasonable locality names for top 10 Indian cities
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Bedrock Location Mapping**: Implemented an instruction-dense location resolution prompt that maps `location_anchor` + `city` into URL-compatible, portal-specific locality identifiers for both NoBroker (capitalized local slugs like `Indiranagar`) and 99acres (lowercase, city-appended slugs like `indiranagar-bangalore`) in a single Bedrock Llama 3.1 70B LLM invocation.
+  - **Graceful Slug Map Injection**: Designed a thread-safe, temporary slug map lookup patch inside `query_builder_node`. It dynamically maps resolved localities to the correct base city slugs during the `generate_url` call, and safely cleans up temporary keys afterward. This integrates flawlessly with `PortalConfig.generate_url` without polluting configuration files.
+  - **Fallback Defaults & Bounds**: Applies standard radius (4 km) and budget floor (₹0) defaults before URL construction. Extends empty upper bounds (None) to sensible limits (₹5L/mo for rent, ₹50Cr for purchase) for NoBroker to prevent invalid parameters, while omitting `price_max` for 99acres (fully supporting open-ended filters).
+  - **Graceful Filtering & Skips**: Handles unsupported cities by skipping the portal entirely (as verified by city slug map checks). Skips NoBroker gracefully when the property type is `plot` since NoBroker does not support plot listings.
+  - **Observability Tracing**: Instrumenting every query builder run with Langfuse trace observation, sessions, users, and tags (`["propgenie", "query_builder"]`).
+- **Key Files Created/Modified**:
+  - [query_builder.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/query_builder.py): Fully implemented the query builder agent with defaults, Bedrock locality mapper, and URL generation.
+  - [test_query_builder.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_query_builder.py): Created comprehensive unit tests validating happy path Bangalore rental URL construction, default application, unsupported city skips, and unsupported property type skips.
+  - [test_placeholder.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_placeholder.py): Removed outdated query builder stub test assertions.
+- **Verification/Testing Steps**:
+  - Confirmed 100% type safety with MyPy passing with zero issues across 20 source files.
+  - Executed all 42 PyTest backend unit tests, achieving a flawless 100% pass rate.
 
 ---
 
@@ -189,7 +219,23 @@ So that I never encounter broken links or fabricated portal pages.
 - `validated_urls` in state contains only passing URLs
 - `portals_dropped` in state lists excluded portals
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Comprehensive Structural Checks**: Implemented rigorous structural schema validation that inspects whitelisted domains (`nobroker.in`, `99acres.com`), invalid double-slashes (`//`), empty path segments, and query parameter parsing.
+  - **Plausible Budget Enforcement**: Decodes comma-separated pricing parameters (`rent` / `price`) for NoBroker and min/max queries (`budget_min` / `budget_max`) for 99acres, enforcing logical limits tailored to the search flow (₹1K to ₹5L/mo for rent; ₹1K to ₹50Cr for buy). Malformed or out-of-bounds budgets trigger silent drop logging.
+  - **Concurrent Liveness Checking**: Leverages `concurrent.futures.ThreadPoolExecutor` to execute HTTP HEAD requests in parallel for optimal latency. Configures a robust `User-Agent` to bypass security blocks, a strict 2-second timeout, and validates that responses return successful 2xx status codes.
+  - **Trace Hallucination Flagging**: Integrates Langfuse trace tagging, automatically registering `"hallucination_detected"` and details of dropped URLs in the metadata whenever any validation check fails, matching Risk R2 mitigation.
+- **Key Files Created/Modified**:
+  - [url_validator.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/url_validator.py): Fully implemented the URL validator agent node with structural rules, parallel liveness checking, and Langfuse tracing.
+  - [test_url_validator.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_url_validator.py): Created exhaustive unit tests validating happy path validation, structural whitelist checks, budget bounds checking, and concurrent HEAD failures/timeouts.
+  - [test_placeholder.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_placeholder.py): Removed outdated URL validator stub test assertions.
+- **Verification/Testing Steps**:
+  - Executed MyPy static type checking, passing with 100% compliance across 21 source files with zero issues.
+  - Ran all 47 PyTest backend unit tests, achieving a perfect 100% pass rate.
+
+---
 
 ---
 
@@ -218,7 +264,21 @@ So that I can quickly scan results and click through to the most relevant portal
 - Default-applied notes appear when radius or budget floor was assumed
 - `search_meta` event correctly reports `portals_searched`, `portals_returned`, `portals_dropped`
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Dynamic Card Formatting**: Implemented `response_formatter_node` to transform validated URL schemas into client-ready `portal_card` event payloads, establishing proper capitalization rules, currency formatting (₹X L / Cr / K), and contextual property summaries.
+  - **Prioritization Logic**: Dynamically assigned portal priority indicator in the `portal_card` (NoBroker prioritized for rent; 99acres prioritized for buy).
+  - **Fallback Tracking**: Configured stringification of default fallbacks via `notes` metadata, ensuring users receive visual feedback if an implicit 4 km radius or ₹0 budget floor was applied during the Query Builder or Clarification breach.
+  - **Meta Payload Migration**: Enhanced LangGraph execution to accurately extract `search_meta` dynamically from state inside `graph.py`, leveraging the accurate counters returned by the Formatter node.
+- **Key Files Created/Modified**:
+  - [response_formatter.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/response_formatter.py): Fully implemented the formatter agent.
+  - [test_response_formatter.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_response_formatter.py): Created comprehensive unit tests validating happy path formatting, buy flow overrides, budget stringification logic, and default parameter tagging.
+  - [graph.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/graph.py): Updated the post-stream meta extraction block to use the unified state object.
+- **Verification/Testing Steps**:
+  - Verified formatting logic via PyTest passing perfectly on `test_response_formatter.py`.
+  - Static typing constraints checked and enforced using `mypy`.
 
 ---
 
@@ -252,4 +312,21 @@ So that multi-turn conversations maintain context and the system can resume afte
 - Connection pooling is configured with `maxPoolSize` appropriate for Lambda concurrency
 - MongoDB connection string is read from `MONGODB_URI` environment variable
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Connection Pooling & Index Initializer**: Built `db/connection.py` implementing thread-safe MongoClient connection pooling using `MONGODB_URI` and configurable pool sizes (via `MONGODB_MAX_POOL_SIZE` or default 50). Programmatic index creation is executed inside `get_database` to guarantee that both the TTL index (`last_active` expire after 1800s) and regular index on `ip` are present.
+  - **CRUD Session Management Operations**: Implemented `db/session_manager.py` to support lifecycle commands: `create_session`, `get_session`, `update_session` (which separates entity search criteria under `context` and graph runtime fields under `graph_state` matching the HLD data schema), and `delete_session`.
+  - **State Merging Graph Node Operations**: Updated `restore_state` and `save_state` nodes in `graph.py` to seamlessly read and persist `AgentState` parameters from/to MongoDB. Added message merging logic in `restore_state` to combine the existing stored message history with incoming user queries without creating duplicate records.
+- **Key Files Created/Modified**:
+  - [connection.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/db/connection.py): Connection pool and index setup module.
+  - [session_manager.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/db/session_manager.py): MongoDB operations for session state management.
+  - [graph.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/graph.py): Integrated session manager within state restoration and saving nodes.
+  - [test_session_manager.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_session_manager.py): Exhaustive integration tests for connection pools, index verification, session CRUD lifecycles, and state node merges.
+  - [conftest.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/conftest.py): Added autouse setup fixture to mock MongoClient with `mongomock` across all test files.
+  - [test_url_validator.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_url_validator.py): Fixed a concurrent execution race condition by implementing thread-safe, URL-dependent mock returns.
+- **Verification/Testing Steps**:
+  - Validated type safety using MyPy across all 25 source files with zero issues.
+  - Executed all 56 backend unit and integration tests via PyTest, achieving a 100% pass rate.
+

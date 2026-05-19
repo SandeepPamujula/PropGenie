@@ -1,8 +1,12 @@
 import base64
 import json
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any
+
+from dotenv import load_dotenv
+load_dotenv()
 
 from graph import generate_graph_sse
 
