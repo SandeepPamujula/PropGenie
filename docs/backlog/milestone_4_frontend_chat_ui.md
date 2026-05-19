@@ -72,7 +72,7 @@ So that I don't have to repeat information I've already provided.
 - Session expiry is handled without crashing the UI
 - API URL defaults to `http://localhost:8000` in local dev, empty string (same-origin) in production
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
