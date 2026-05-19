@@ -223,14 +223,23 @@ def generate_graph_sse(
             if url not in [v.get("url") for v in validated]
         ]
 
-        yield f"event: search_meta\ndata: {json.dumps({
-            'type': 'search_meta',
-            'portals_searched': len(generated),
-            'portals_returned': len(validated),
-            'portals_dropped': dropped,
-            'clarification_rounds': final_state.get('clarification_round', 0),
-            'defaults_applied': ['radius_km: 4'] if final_state.get('radius_km') is None else []
-        })}\n\n"
+        search_meta = final_state.get("search_meta")
+        if not search_meta:
+            defaults = []
+            if final_state.get("radius_km") == 4:
+                defaults.append("radius_km: 4")
+            if final_state.get("budget_min") == 0:
+                defaults.append("budget_min: 0")
+            search_meta = {
+                'type': 'search_meta',
+                'portals_searched': len(generated),
+                'portals_returned': len(validated),
+                'portals_dropped': dropped,
+                'clarification_rounds': final_state.get('clarification_round', 0),
+                'defaults_applied': defaults
+            }
+        
+        yield f"event: search_meta\ndata: {json.dumps(search_meta)}\n\n"
 
         yield f"event: done\ndata: {json.dumps({
             'type': 'done',
