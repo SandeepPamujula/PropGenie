@@ -6,6 +6,7 @@ import { ChatHeader } from '@/components/ChatHeader'
 import { ChatInput } from '@/components/ChatInput'
 import { ChatLayout } from '@/components/ChatLayout'
 import { MessageList } from '@/components/MessageList'
+import { RateLimitBanner } from '@/components/RateLimitBanner'
 import { sendMessage, SessionExpiredError, RateLimitError } from '@/lib/api'
 import { getSessionId } from '@/lib/session'
 import { consumeSSEStream } from '@/lib/sse'
@@ -20,6 +21,7 @@ export default function Home(): ReactElement {
     getSessionId()
   }, [])
   const [currentSearches, setCurrentSearches] = useState(0)
+  const [isRateLimited, setIsRateLimited] = useState(false)
   const [activeStatus, setActiveStatus] = useState<{
     phase: AgentPhase
     message: string
@@ -112,7 +114,7 @@ export default function Home(): ReactElement {
               summary: data.summary,
               url: data.url,
               isPriority,
-              notes: data.notes,
+              ...(data.notes !== undefined ? { notes: data.notes } : {}),
             }
             portalResults = [...portalResults, card]
 
@@ -181,6 +183,9 @@ export default function Home(): ReactElement {
           case 'done': {
             const data = payload.data
             setCurrentSearches(data.search_count_today)
+            if (data.search_count_today >= data.search_limit) {
+              setIsRateLimited(true)
+            }
             setIsProcessing(false)
             setActiveStatus(null)
             break
@@ -191,15 +196,18 @@ export default function Home(): ReactElement {
       setActiveStatus(null)
       setIsProcessing(false)
 
+      if (err instanceof RateLimitError) {
+        setIsRateLimited(true)
+        setCurrentSearches(10)
+        return
+      }
+
       let errMsg = 'A connection error occurred while reaching the server.'
       let type: 'text' | 'error' = 'error'
 
       if (err instanceof SessionExpiredError) {
         errMsg =
           'Your search session has expired. I have started a new session for you. Please try submitting your query again.'
-        type = 'text'
-      } else if (err instanceof RateLimitError) {
-        errMsg = 'You have reached your daily search limit of 10. Please try again tomorrow.'
         type = 'text'
       } else if (err instanceof Error) {
         errMsg = err.message
@@ -230,12 +238,18 @@ export default function Home(): ReactElement {
   const header = <ChatHeader currentSearches={currentSearches} maxSearches={10} />
 
   const inputBar = (
-    <ChatInput
-      value={input}
-      onChange={setInput}
-      onSubmit={() => handleSubmit()}
-      disabled={isProcessing}
-    />
+    <div className="flex flex-col gap-3 w-full animate-fade-in">
+      {isRateLimited && <RateLimitBanner maxSearches={10} />}
+      <ChatInput
+        value={input}
+        onChange={setInput}
+        onSubmit={() => handleSubmit()}
+        disabled={isProcessing || isRateLimited}
+        {...(isRateLimited
+          ? { placeholder: 'Daily search limit reached. Resets at midnight IST.' }
+          : {})}
+      />
+    </div>
   )
 
   return (

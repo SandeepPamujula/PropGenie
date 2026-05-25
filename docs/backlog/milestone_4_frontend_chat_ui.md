@@ -191,7 +191,7 @@ So that I understand why I can't search and know when I can try again.
 - Input field is disabled when rate limit is reached
 - Clarification exchanges do not increment the displayed counter
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
