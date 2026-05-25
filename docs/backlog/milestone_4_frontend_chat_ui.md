@@ -220,7 +220,7 @@ So that the application never shows a broken state or raw error messages.
 - Error boundary catches and displays React rendering errors gracefully
 - No raw error messages, stack traces, or blank screens visible to users
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -250,4 +250,4 @@ So that regressions are caught early and the CI pipeline can validate frontend c
 - Tests can run in CI without a browser (JSDOM environment)
 - Minimum 80% line coverage for `src/lib/` and `src/components/`
 
-**Status:** Not Started
+**Status:** Completed
