@@ -1,18 +1,24 @@
 'use client'
 
-import { useState, type ReactElement } from 'react'
+import { useState, useEffect, type ReactElement } from 'react'
 import type { AgentPhase } from '@/components/AgentStatus'
 import { ChatHeader } from '@/components/ChatHeader'
 import { ChatInput } from '@/components/ChatInput'
 import { ChatLayout } from '@/components/ChatLayout'
 import { MessageList } from '@/components/MessageList'
 import { sendMessage, SessionExpiredError, RateLimitError } from '@/lib/api'
+import { getSessionId } from '@/lib/session'
 import { consumeSSEStream } from '@/lib/sse'
 import type { ChatMessage, PortalResult, SearchMeta } from '@/types/domain'
 
 export default function Home(): ReactElement {
   const [input, setInput] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+
+  useEffect(() => {
+    // Generate/initialize session ID on first visit
+    getSessionId()
+  }, [])
   const [currentSearches, setCurrentSearches] = useState(0)
   const [activeStatus, setActiveStatus] = useState<{
     phase: AgentPhase
@@ -90,15 +96,19 @@ export default function Home(): ReactElement {
           case 'portal_card': {
             const data = payload.data
             setActiveStatus(null)
-            
+
             // Map priority from data.isPriority or backend's data.priority
-            const isPriority = typeof data.isPriority === 'boolean'
-              ? data.isPriority
-              : (typeof data.priority === 'boolean' ? data.priority : false)
-            
+            const isPriority =
+              typeof data.isPriority === 'boolean'
+                ? data.isPriority
+                : typeof data.priority === 'boolean'
+                  ? data.priority
+                  : false
+
             const card: PortalResult = {
               portal: data.portal,
-              label: data.label || `${data.portal.charAt(0).toUpperCase()}${data.portal.slice(1)} Link`,
+              label:
+                data.label || `${data.portal.charAt(0).toUpperCase()}${data.portal.slice(1)} Link`,
               summary: data.summary,
               url: data.url,
               isPriority,
