@@ -39,7 +39,7 @@ So that I have a delightful experience searching for properties.
 - All interactive elements have unique IDs for testability
 - Page loads with proper `<title>`, `<meta description>`, and semantic HTML
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -72,7 +72,7 @@ So that I don't have to repeat information I've already provided.
 - Session expiry is handled without crashing the UI
 - API URL defaults to `http://localhost:8000` in local dev, empty string (same-origin) in production
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -109,7 +109,7 @@ So that I know the system is working and can follow its progress.
 - Connection errors display a retry button
 - Stream is properly closed after receiving a `done` event
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -144,7 +144,27 @@ So that I can quickly compare results across portals and navigate to the one I p
 - Search meta shows accurate counts
 - Mobile layout stacks cards vertically with full-width
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions:**
+  - Followed Atomic Design by implementing components (`PortalCard`, `PortalCardList`, `SearchMeta`) as molecules and re-exporting them from the components root.
+  - Used custom CSS variables (`--color-portal-nobroker-green`, `--color-portal-acres-blue`, etc.) and the `glass-card` utility class to deliver a premium, glassmorphism-based design with transition animations and hover elevation effects.
+  - Sorted the cards list client-side to guarantee that priority cards (NoBroker for rentals, 99acres for buy) are displayed first.
+  - Used dynamic inline delays to implement staggered fade-in animations on cards.
+  - Mapped technical defaults (`radius_km: 4`, `budget_min: 0`) to user-friendly messages ("4 km radius search applied", "Budget floor assumed as ₹0").
+- **Key Files Created/Modified:**
+  - Created: `frontend/src/components/molecules/PortalCard/PortalCard.tsx` (and `PortalCard.test.tsx`, re-export file `PortalCard.tsx`)
+  - Created: `frontend/src/components/molecules/PortalCardList/PortalCardList.tsx` (and `PortalCardList.test.tsx`, re-export file `PortalCardList.tsx`)
+  - Created: `frontend/src/components/molecules/SearchMeta/SearchMeta.tsx` (and `SearchMeta.test.tsx`, re-export file `SearchMeta.tsx`)
+  - Modified: `frontend/src/types/domain.ts` (updated models to include `notes` and `SearchMeta`)
+  - Modified: `frontend/src/types/sse.ts` (updated `PortalCardEvent` payload model)
+  - Modified: `frontend/src/app/page.tsx` (updated event mapping for SSE events)
+  - Modified: `frontend/src/components/organisms/MessageList/MessageList.tsx` (integrated the new molecules)
+- **Verification/Testing Steps:**
+  - Wrote comprehensive unit tests for each component to cover brand coloring, priority labeling, CTAs, counts, and sorting.
+  - Verified linting runs cleanly (`npm run lint`).
+  - Ran the test suite successfully with Jest (`npm test`).
 
 ---
 
@@ -171,7 +191,7 @@ So that I understand why I can't search and know when I can try again.
 - Input field is disabled when rate limit is reached
 - Clarification exchanges do not increment the displayed counter
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -200,7 +220,7 @@ So that the application never shows a broken state or raw error messages.
 - Error boundary catches and displays React rendering errors gracefully
 - No raw error messages, stack traces, or blank screens visible to users
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -230,4 +250,4 @@ So that regressions are caught early and the CI pipeline can validate frontend c
 - Tests can run in CI without a browser (JSDOM environment)
 - Minimum 80% line coverage for `src/lib/` and `src/components/`
 
-**Status:** Not Started
+**Status:** Completed
