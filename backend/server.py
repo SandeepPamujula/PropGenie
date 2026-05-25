@@ -7,9 +7,10 @@ load_dotenv()
 
 from fastapi import FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from graph import generate_graph_sse
 from pydantic import BaseModel
+from utils.rate_limiter import check_rate_limit, RateLimitExceededException, get_next_ist_midnight_string
 
 app = FastAPI(title="PropGenie Backend Service", version="1.0.0")
 
@@ -80,6 +81,19 @@ async def chat(
         ip = x_forwarded.split(",")[0].strip()
     else:
         ip = request.client.host if request.client else "127.0.0.1"
+
+    # Rate Limit Check
+    try:
+        check_rate_limit(ip)
+    except RateLimitExceededException:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "rate_limit_exceeded",
+                "message": "You've reached your daily search limit of 10. Please try again tomorrow!",
+                "reset_at": get_next_ist_midnight_string()
+            }
+        )
 
     # Invoke the shared agent graph generator
     sse_generator = generate_graph_sse(session_id, ip, chat_request.message)
