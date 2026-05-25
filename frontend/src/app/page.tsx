@@ -15,17 +15,31 @@ import type { ChatMessage, PortalResult, SearchMeta } from '@/types/domain'
 export default function Home(): ReactElement {
   const [input, setInput] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isOnline, setIsOnline] = useState(true)
 
   useEffect(() => {
     // Generate/initialize session ID on first visit
     getSessionId()
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsOnline(navigator.onLine)
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
   }, [])
+
   const [currentSearches, setCurrentSearches] = useState(0)
   const [isRateLimited, setIsRateLimited] = useState(false)
   const [activeStatus, setActiveStatus] = useState<{
     phase: AgentPhase
     message: string
   } | null>(null)
+  const [isWaitingForFirstEvent, setIsWaitingForFirstEvent] = useState(false)
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -38,37 +52,18 @@ export default function Home(): ReactElement {
     },
   ])
 
-  const handleSubmit = async (overrideText?: string) => {
-    const textToSubmit = overrideText !== undefined ? overrideText : input
-    if (!textToSubmit.trim() || isProcessing) return
-
-    if (overrideText === undefined) {
-      setInput('')
-    }
-
-    setIsProcessing(true)
-    setActiveStatus({
-      phase: 'orchestrator',
-      message: 'Understanding your search query...',
-    })
-
-    const userMessage: ChatMessage = {
-      id: `msg-user-${Date.now()}`,
-      role: 'user',
-      content: textToSubmit,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      type: 'text',
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-
+  const handleSubmitWithRetry = async (
+    textToSubmit: string,
+    portalCardsMessageId: string,
+    attempt = 1
+  ) => {
     try {
       const stream = await sendMessage(textToSubmit)
-
-      const portalCardsMessageId = `msg-portals-${Date.now()}`
       let portalResults: PortalResult[] = []
 
       await consumeSSEStream(stream, (payload) => {
+        setIsWaitingForFirstEvent(false)
+
         switch (payload.event) {
           case 'agent_status': {
             const data = payload.data
@@ -99,7 +94,6 @@ export default function Home(): ReactElement {
             const data = payload.data
             setActiveStatus(null)
 
-            // Map priority from data.isPriority or backend's data.priority
             const isPriority =
               typeof data.isPriority === 'boolean'
                 ? data.isPriority
@@ -188,54 +182,135 @@ export default function Home(): ReactElement {
             }
             setIsProcessing(false)
             setActiveStatus(null)
+
+            if (portalResults.length === 0) {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `msg-empty-${Date.now()}`,
+                  role: 'assistant',
+                  content: 'No portals returned results for your search. Try adjusting your criteria.',
+                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  type: 'text',
+                },
+              ])
+            }
             break
           }
         }
       })
     } catch (err: unknown) {
-      setActiveStatus(null)
-      setIsProcessing(false)
-
       if (err instanceof RateLimitError) {
         setIsRateLimited(true)
         setCurrentSearches(10)
+        setIsProcessing(false)
+        setActiveStatus(null)
+        setIsWaitingForFirstEvent(false)
         return
       }
 
-      let errMsg = 'A connection error occurred while reaching the server.'
-      let type: 'text' | 'error' = 'error'
-
       if (err instanceof SessionExpiredError) {
-        errMsg =
-          'Your search session has expired. I have started a new session for you. Please try submitting your query again.'
-        type = 'text'
-      } else if (err instanceof Error) {
-        errMsg = err.message
+        setIsProcessing(false)
+        setActiveStatus(null)
+        setIsWaitingForFirstEvent(false)
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-session-${Date.now()}`,
+            role: 'assistant',
+            content:
+              'Your search session has expired. I have started a new session for you. Please try submitting your query again.',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: 'text',
+          },
+        ])
+        return
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `msg-error-catch-${Date.now()}`,
-          role: 'assistant',
-          content: errMsg,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          type,
-        },
-      ])
+      if (attempt <= 3) {
+        // Retry logic with exponential backoff
+        setActiveStatus({
+          phase: 'orchestrator',
+          message: `Connection lost. Retrying (Attempt ${attempt} of 3)...`,
+        })
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise((res) => setTimeout(res, delay))
+        await handleSubmitWithRetry(textToSubmit, portalCardsMessageId, attempt + 1)
+      } else {
+        // Max retries exceeded
+        setIsProcessing(false)
+        setActiveStatus(null)
+        setIsWaitingForFirstEvent(false)
+
+        let errMsg = 'A connection error occurred while reaching the server.'
+        if (err instanceof Error) {
+          errMsg = err.message
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-error-catch-${Date.now()}`,
+            role: 'assistant',
+            content: errMsg,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: 'error',
+          },
+        ])
+      }
     }
+  }
+
+  const handleSubmit = async (overrideText?: string) => {
+    const textToSubmit = overrideText !== undefined ? overrideText : input
+    if (!textToSubmit.trim() || isProcessing) return
+
+    if (overrideText === undefined) {
+      setInput('')
+    }
+
+    setIsProcessing(true)
+    setIsWaitingForFirstEvent(true)
+    setActiveStatus({
+      phase: 'orchestrator',
+      message: 'Understanding your search query...',
+    })
+
+    const userMessage: ChatMessage = {
+      id: `msg-user-${Date.now()}`,
+      role: 'user',
+      content: textToSubmit,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      type: 'text',
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+
+    const portalCardsMessageId = `msg-portals-${Date.now()}`
+    await handleSubmitWithRetry(textToSubmit, portalCardsMessageId, 1)
   }
 
   const handleRetry = () => {
     const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
     if (lastUserMsg) {
-      // Remove any error messages from search attempts
       setMessages((prev) => prev.filter((m) => m.type !== 'error'))
       handleSubmit(lastUserMsg.content)
     }
   }
 
-  const header = <ChatHeader currentSearches={currentSearches} maxSearches={10} />
+  const header = (
+    <div className="flex flex-col w-full">
+      {!isOnline && (
+        <div
+          id="offline-banner"
+          className="w-full bg-red-600 px-4 py-2 text-center text-sm font-medium text-white shadow-sm dark:bg-red-700 animate-fade-in"
+        >
+          You are currently offline. Please check your internet connection.
+        </div>
+      )}
+      <ChatHeader currentSearches={currentSearches} maxSearches={10} />
+    </div>
+  )
 
   const inputBar = (
     <div className="flex flex-col gap-3 w-full animate-fade-in">
@@ -244,17 +319,24 @@ export default function Home(): ReactElement {
         value={input}
         onChange={setInput}
         onSubmit={() => handleSubmit()}
-        disabled={isProcessing || isRateLimited}
+        disabled={isProcessing || isRateLimited || !isOnline}
         {...(isRateLimited
           ? { placeholder: 'Daily search limit reached. Resets at midnight IST.' }
-          : {})}
+          : !isOnline
+            ? { placeholder: 'You are offline.' }
+            : {})}
       />
     </div>
   )
 
   return (
     <ChatLayout header={header} inputBar={inputBar}>
-      <MessageList messages={messages} activeStatus={activeStatus} onRetry={handleRetry} />
+      <MessageList
+        messages={messages}
+        activeStatus={activeStatus}
+        onRetry={handleRetry}
+        isWaitingForFirstEvent={isWaitingForFirstEvent}
+      />
     </ChatLayout>
   )
 }

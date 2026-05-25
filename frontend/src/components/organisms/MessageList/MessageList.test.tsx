@@ -66,7 +66,6 @@ describe('MessageList', () => {
       />,
     )
 
-    expect(screen.getByText('Search Failure')).toBeInTheDocument()
     expect(screen.getByText('A connection error occurred')).toBeInTheDocument()
 
     const retryBtn = screen.getByRole('button', { name: /Retry Search/i })
