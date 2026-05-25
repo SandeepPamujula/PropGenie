@@ -49,3 +49,48 @@ def test_ist_date_calculation():
     
     assert isinstance(reset_at, str)
     assert "T00:00:00" in reset_at
+
+def test_increment_rate_limit(auto_mock_db_client):
+    """Test that increment_rate_limit correctly upserts and increments the count."""
+    db = get_database()
+    from utils.rate_limiter import increment_rate_limit
+    
+    # First increment
+    increment_rate_limit("10.0.0.1")
+    doc = db.rate_limits.find_one({"ip": "10.0.0.1"})
+    assert doc is not None
+    assert doc["count"] == 1
+    assert "expires_at" in doc
+    
+    # Second increment
+    increment_rate_limit("10.0.0.1")
+    doc = db.rate_limits.find_one({"ip": "10.0.0.1"})
+    assert doc["count"] == 2
+
+def test_save_state_increments_only_on_completion(auto_mock_db_client):
+    """Test that save_state only increments rate limit when search_completed is True."""
+    from graph import save_state
+    db = get_database()
+    
+    # State with search_completed = False
+    state1 = {
+        "session_id": "test-session-1",
+        "ip": "192.168.1.1",
+        "search_completed": False
+    }
+    save_state(state1)
+    
+    doc1 = db.rate_limits.find_one({"ip": "192.168.1.1"})
+    assert doc1 is None  # Should not have incremented
+    
+    # State with search_completed = True
+    state2 = {
+        "session_id": "test-session-2",
+        "ip": "192.168.1.1",
+        "search_completed": True
+    }
+    save_state(state2)
+    
+    doc2 = db.rate_limits.find_one({"ip": "192.168.1.1"})
+    assert doc2 is not None
+    assert doc2["count"] == 1

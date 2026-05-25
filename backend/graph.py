@@ -10,6 +10,7 @@ from agents.url_validator import url_validator_node
 from db.session_manager import create_session, get_session, update_session
 from langgraph.graph import END, StateGraph
 from models.state import AgentState, get_initial_state
+from utils.rate_limiter import increment_rate_limit
 
 
 def restore_state(state: AgentState) -> dict[str, Any]:
@@ -71,6 +72,13 @@ def save_state(state: AgentState) -> dict[str, Any]:
     """
     print("[Graph Node] save_state executed")
     session_id = state.get("session_id", "")
+    
+    # Check if a search was just completed and increment the rate limit
+    if state.get("search_completed"):
+        ip = state.get("ip", "")
+        if ip:
+            increment_rate_limit(ip)
+            
     if session_id:
         update_session(session_id, state)
     return {"session_id": session_id}

@@ -51,7 +51,8 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
         print(f"[Clarification Agent] 3-round breach detected (round: {round_count}). Applying defaults.")
         updates: dict[str, Any] = {
             "proceed_with_defaults": True,
-            "pending_fields": []
+            "pending_fields": [],
+            "search_completed": False
         }
         
         # Apply defaults
@@ -105,7 +106,8 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
             messages_for_llm.append(AIMessage(content=content))
             
     updates = {
-        "proceed_with_defaults": False
+        "proceed_with_defaults": False,
+        "search_completed": False
     }
     
     try:

@@ -128,5 +128,6 @@ def response_formatter_node(state: AgentState) -> dict[str, Any]:
     
     return {
         "validated_urls": formatted_urls,
-        "search_meta": search_meta
+        "search_meta": search_meta,
+        "search_completed": True
     }
