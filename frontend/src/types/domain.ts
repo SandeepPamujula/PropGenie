@@ -10,6 +10,15 @@ export interface PortalResult {
   summary: string
   url: string
   isPriority: boolean
+  notes?: string
+}
+
+export interface SearchMeta {
+  portalsSearched: number
+  portalsReturned: number
+  portalsDropped: string[]
+  clarificationRounds: number
+  defaultsApplied: string[]
 }
 
 export interface ChatMessage {
@@ -23,6 +32,7 @@ export interface ChatMessage {
   resolvedFields?: Record<string, unknown>
   missingFields?: string[]
   portalResults?: PortalResult[]
+  searchMeta?: SearchMeta
 }
 
 export interface SessionContext {

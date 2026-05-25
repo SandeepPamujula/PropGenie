@@ -18,10 +18,12 @@ export interface ClarificationEvent {
 
 export interface PortalCardEvent {
   portal: Portal
-  label: string
+  label?: string
   summary: string
   url: string
-  isPriority: boolean
+  isPriority?: boolean
+  priority?: boolean
+  notes?: string
 }
 
 export interface SearchMetaEvent {

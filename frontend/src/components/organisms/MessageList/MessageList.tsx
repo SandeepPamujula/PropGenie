@@ -2,6 +2,8 @@ import type { ReactElement } from 'react'
 import type { ChatMessage } from '../../../types/domain'
 import { AgentStatus, type AgentPhase } from '../../molecules/AgentStatus/AgentStatus'
 import { ClarificationMessage } from '../../molecules/ClarificationMessage/ClarificationMessage'
+import { PortalCardList } from '../../molecules/PortalCardList/PortalCardList'
+import { SearchMeta } from '../../molecules/SearchMeta/SearchMeta'
 
 export interface MessageListProps {
   messages: ChatMessage[]
@@ -101,78 +103,22 @@ export function MessageList({
                   {message.content}
                 </div>
 
-                {/* Render Portal Search Cards (will be styled natively in US-20) */}
+                {/* Render Portal Search Cards */}
                 {message.type === 'portal_cards' &&
                   message.portalResults &&
                   message.portalResults.length > 0 && (
-                    <div
-                      id={`portal-cards-${message.id}`}
-                      className="grid grid-cols-1 gap-3 sm:grid-cols-2 mt-1 w-full max-w-xl animate-fade-in"
-                    >
-                      {message.portalResults.map((card, idx) => {
-                        const getPortalColorClass = (portalName: string) => {
-                          switch (portalName.toLowerCase()) {
-                            case 'nobroker':
-                              return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-900/30'
-                            case '99acres':
-                              return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-900/30'
-                            case 'magicbricks':
-                              return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border-red-200/50 dark:border-red-900/30'
-                            case 'housing':
-                              return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-900/30'
-                            default:
-                              return 'text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-950/20 border-zinc-200/50 dark:border-zinc-900/30'
-                          }
-                        }
-
-                        return (
-                          <div
-                            key={idx}
-                            className="flex flex-col justify-between p-3.5 rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50"
-                          >
-                            <div>
-                              <span
-                                className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getPortalColorClass(
-                                  card.portal,
-                                )}`}
-                              >
-                                {card.portal}
-                              </span>
-                              <h4 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mt-2 line-clamp-1">
-                                {card.label}
-                              </h4>
-                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 leading-normal">
-                                {card.summary}
-                              </p>
-                            </div>
-                            <div className="mt-3.5 pt-2.5 border-t border-zinc-100 dark:border-zinc-800/80">
-                              <a
-                                href={card.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center justify-between text-xs font-bold text-brand-500 hover:text-brand-600 transition-colors"
-                              >
-                                <span>View Listings</span>
-                                <svg
-                                  className="h-3.5 w-3.5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                                  />
-                                </svg>
-                              </a>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+                    <PortalCardList cards={message.portalResults} />
                   )}
+
+                {/* Render Search Meta */}
+                {message.type === 'portal_cards' && message.searchMeta && (
+                  <SearchMeta
+                    portalsSearched={message.searchMeta.portalsSearched}
+                    portalsReturned={message.searchMeta.portalsReturned}
+                    portalsDropped={message.searchMeta.portalsDropped}
+                    defaultsApplied={message.searchMeta.defaultsApplied}
+                  />
+                )}
               </div>
             )}
           </div>

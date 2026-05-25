@@ -8,7 +8,7 @@ import { ChatLayout } from '@/components/ChatLayout'
 import { MessageList } from '@/components/MessageList'
 import { sendMessage, SessionExpiredError, RateLimitError } from '@/lib/api'
 import { consumeSSEStream } from '@/lib/sse'
-import type { ChatMessage, PortalResult } from '@/types/domain'
+import type { ChatMessage, PortalResult, SearchMeta } from '@/types/domain'
 
 export default function Home(): ReactElement {
   const [input, setInput] = useState('')
@@ -90,12 +90,19 @@ export default function Home(): ReactElement {
           case 'portal_card': {
             const data = payload.data
             setActiveStatus(null)
+            
+            // Map priority from data.isPriority or backend's data.priority
+            const isPriority = typeof data.isPriority === 'boolean'
+              ? data.isPriority
+              : (typeof data.priority === 'boolean' ? data.priority : false)
+            
             const card: PortalResult = {
               portal: data.portal,
-              label: data.label,
+              label: data.label || `${data.portal.charAt(0).toUpperCase()}${data.portal.slice(1)} Link`,
               summary: data.summary,
               url: data.url,
-              isPriority: data.isPriority,
+              isPriority,
+              notes: data.notes,
             }
             portalResults = [...portalResults, card]
 
@@ -124,11 +131,13 @@ export default function Home(): ReactElement {
           }
           case 'search_meta': {
             const data = payload.data
-            const metaStr = `\n\n(Searched ${data.portals_searched} portals, found ${data.portals_returned} results. ${
-              data.defaults_applied.length > 0
-                ? `Applied defaults: ${data.defaults_applied.join(', ')}`
-                : ''
-            })`
+            const meta: SearchMeta = {
+              portalsSearched: data.portals_searched,
+              portalsReturned: data.portals_returned,
+              portalsDropped: data.portals_dropped || [],
+              clarificationRounds: data.clarification_rounds || 0,
+              defaultsApplied: data.defaults_applied || [],
+            }
             setMessages((prev) => {
               const existingIdx = prev.findIndex((m) => m.id === portalCardsMessageId)
               if (existingIdx >= 0) {
@@ -137,7 +146,7 @@ export default function Home(): ReactElement {
                 if (prevMsg) {
                   copy[existingIdx] = {
                     ...prevMsg,
-                    content: prevMsg.content + metaStr,
+                    searchMeta: meta,
                   }
                 }
                 return copy
