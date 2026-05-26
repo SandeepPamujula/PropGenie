@@ -165,6 +165,17 @@ def orchestrator_node(state: AgentState) -> dict[str, Any]:
             response_text = str(content)
         print(f"[Orchestrator Agent] LLM Raw Response: {response_text}")
         
+        # Accumulate usage statistics
+        updates["llm_calls"] = state.get("llm_calls", 0) + 1
+        if hasattr(response, "response_metadata") and "usage" in response.response_metadata:
+            usage = response.response_metadata["usage"]
+            updates["total_input_tokens"] = state.get("total_input_tokens", 0) + usage.get("input_tokens", 0)
+            updates["total_output_tokens"] = state.get("total_output_tokens", 0) + usage.get("output_tokens", 0)
+        elif hasattr(response, "usage_metadata") and response.usage_metadata:
+            usage = response.usage_metadata
+            updates["total_input_tokens"] = state.get("total_input_tokens", 0) + usage.get("input_tokens", 0)
+            updates["total_output_tokens"] = state.get("total_output_tokens", 0) + usage.get("output_tokens", 0)
+        
         # Extract extracted parameters from LLM response
         extracted = extract_json(response_text)
         

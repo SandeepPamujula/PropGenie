@@ -150,6 +150,17 @@ def query_builder_node(state: AgentState) -> dict[str, Any]:
             response_text = str(content).strip()
             print(f"[Query Builder Agent] LLM Raw Mapping Response: {response_text}")
             
+            # Accumulate usage statistics
+            updates["llm_calls"] = state.get("llm_calls", 0) + 1
+            if hasattr(response, "response_metadata") and "usage" in response.response_metadata:
+                usage = response.response_metadata["usage"]
+                updates["total_input_tokens"] = state.get("total_input_tokens", 0) + usage.get("input_tokens", 0)
+                updates["total_output_tokens"] = state.get("total_output_tokens", 0) + usage.get("output_tokens", 0)
+            elif hasattr(response, "usage_metadata") and response.usage_metadata:
+                usage = response.usage_metadata
+                updates["total_input_tokens"] = state.get("total_input_tokens", 0) + usage.get("input_tokens", 0)
+                updates["total_output_tokens"] = state.get("total_output_tokens", 0) + usage.get("output_tokens", 0)
+            
             extracted = extract_json(response_text)
             resolved_localities["nobroker"] = extracted.get("nobroker")
             resolved_localities["99acres"] = extracted.get("99acres")

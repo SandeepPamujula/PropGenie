@@ -64,6 +64,7 @@ def init_indexes(db: Any) -> None:
     - Regular index on sessions.ip
     - Compound unique index on rate_limits [ip, date]
     - TTL index on rate_limits.expires_at
+    - Regular indexes on search_logs (timestamp, city, intent)
     """
     # Create TTL index on last_active
     db.sessions.create_index("last_active", expireAfterSeconds=1800)
@@ -74,3 +75,8 @@ def init_indexes(db: Any) -> None:
     db.rate_limits.create_index([("ip", 1), ("date", 1)], unique=True)
     # Create TTL index for automatic cleanup of rate limits
     db.rate_limits.create_index("expires_at", expireAfterSeconds=0)
+    
+    # Create indexes for search analytics
+    db.search_logs.create_index("timestamp")
+    db.search_logs.create_index("city")
+    db.search_logs.create_index("intent")

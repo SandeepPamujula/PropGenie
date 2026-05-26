@@ -130,6 +130,17 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
             
         print(f"[Clarification Agent] LLM question: {question_text}")
         
+        # Accumulate usage statistics
+        updates["llm_calls"] = state.get("llm_calls", 0) + 1
+        if hasattr(response, "response_metadata") and "usage" in response.response_metadata:
+            usage = response.response_metadata["usage"]
+            updates["total_input_tokens"] = state.get("total_input_tokens", 0) + usage.get("input_tokens", 0)
+            updates["total_output_tokens"] = state.get("total_output_tokens", 0) + usage.get("output_tokens", 0)
+        elif hasattr(response, "usage_metadata") and response.usage_metadata:
+            usage = response.usage_metadata
+            updates["total_input_tokens"] = state.get("total_input_tokens", 0) + usage.get("input_tokens", 0)
+            updates["total_output_tokens"] = state.get("total_output_tokens", 0) + usage.get("output_tokens", 0)
+        
     except Exception as e:
         print(f"[Clarification Agent] Error invoking Bedrock LLM: {e}")
         question_text = "Could you please provide more details for your property search, such as city, budget, and BHK?"

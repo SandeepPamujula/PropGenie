@@ -8,6 +8,7 @@ from agents.query_builder import query_builder_node
 from agents.response_formatter import response_formatter_node
 from agents.url_validator import url_validator_node
 from db.session_manager import create_session, get_session, update_session
+from db.search_logger import log_search
 from langgraph.graph import END, StateGraph
 from models.state import AgentState, get_initial_state
 from utils.rate_limiter import increment_rate_limit
@@ -17,6 +18,7 @@ def restore_state(state: AgentState) -> dict[str, Any]:
     """
     Graph node that restores/initializes session state from MongoDB.
     """
+    import time
     print("[Graph Node] restore_state executed")
     session_id = state.get("session_id", "")
     if not session_id:
@@ -57,13 +59,18 @@ def restore_state(state: AgentState) -> dict[str, Any]:
             "search_meta": graph_state.get("search_meta"),
             "error": graph_state.get("error"),
             "proceed_with_defaults": graph_state.get("proceed_with_defaults"),
+            "start_time": graph_state.get("start_time") or time.time(),
+            "llm_calls": graph_state.get("llm_calls", 0),
+            "total_input_tokens": graph_state.get("total_input_tokens", 0),
+            "total_output_tokens": graph_state.get("total_output_tokens", 0),
         }
     else:
         # Create session if it does not exist
         ip = state.get("ip", "")
         create_session(session_id, ip)
+        state_update = {"session_id": session_id, "start_time": time.time()}
         update_session(session_id, state)
-        return {"session_id": session_id}
+        return state_update
 
 
 def save_state(state: AgentState) -> dict[str, Any]:
@@ -78,6 +85,9 @@ def save_state(state: AgentState) -> dict[str, Any]:
         ip = state.get("ip", "")
         if ip:
             increment_rate_limit(ip)
+        
+        # Log the search analytics
+        log_search(session_id, ip, state)
             
     if session_id:
         update_session(session_id, state)
