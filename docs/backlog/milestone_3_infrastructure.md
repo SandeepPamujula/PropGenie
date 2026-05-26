@@ -4,7 +4,7 @@
 
 ---
 
-## US-13 — Lambda Function Module
+## US-3.1 — Lambda Function Module
 
 **User Story:**
 As a **DevOps engineer**,
@@ -31,7 +31,7 @@ So that the backend runtime is provisioned securely and supports SSE streaming v
 
 ---
 
-## US-14 — Frontend Hosting Module (S3 + CloudFront)
+## US-3.2 — Frontend Hosting Module (S3 + CloudFront)
 
 **User Story:**
 As a **DevOps engineer**,
@@ -60,7 +60,7 @@ So that the frontend is globally distributed and API requests are proxied throug
 
 ---
 
-## US-15 — CloudWatch Monitoring Module
+## US-3.3 — CloudWatch Monitoring Module
 
 **User Story:**
 As a **DevOps engineer**,
@@ -90,7 +90,7 @@ So that operational issues are detected and alerted on promptly.
 
 ---
 
-## US-16 — Terraform Root Module Composition
+## US-3.4 — Terraform Root Module Composition
 
 **User Story:**
 As a **DevOps engineer**,

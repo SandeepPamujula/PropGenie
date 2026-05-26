@@ -4,7 +4,7 @@
 
 ---
 
-## US-29 — Feature Branch CI Pipeline
+## US-6.1 — Feature Branch CI Pipeline
 
 **User Story:**
 As a **developer**,
@@ -29,7 +29,7 @@ So that code quality issues are caught before merging to main.
 
 ---
 
-## US-30 — Dev Deployment Pipeline
+## US-6.2 — Dev Deployment Pipeline
 
 **User Story:**
 As a **developer**,
@@ -55,7 +55,7 @@ So that the latest code is always live in dev for testing.
 
 ---
 
-## US-31 — Production Deployment Pipeline
+## US-6.3 — Production Deployment Pipeline
 
 **User Story:**
 As a **DevOps engineer**,
@@ -79,7 +79,7 @@ So that production releases are deliberate and auditable.
 
 ---
 
-## US-32 — Secrets & Environment Configuration
+## US-6.4 — Secrets & Environment Configuration
 
 **User Story:**
 As a **DevOps engineer**,

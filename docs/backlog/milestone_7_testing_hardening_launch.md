@@ -4,7 +4,7 @@
 
 ---
 
-## US-33 — End-to-End Integration Tests
+## US-7.1 — End-to-End Integration Tests
 
 **User Story:**
 As a **QA engineer**,
@@ -13,27 +13,32 @@ So that I can validate the system works end-to-end before production releases.
 
 **Tasks:**
 - Create `backend/tests/integration/` directory
-- Write `test_happy_path.py`: send a complete query, assert SSE events received in correct order (`agent_status` → `portal_card` × N → `search_meta` → `done`)
+- Write `test_happy_path.py`: send a complete query, assert SSE events received in correct order (`agent_status` → `portal_card` × N → `search_meta` → `done`), and verify `portal_card` events include `property_links` array when `ENABLE_PROPERTY_SCRAPING=true`
 - Write `test_clarification_flow.py`: send ambiguous query, assert `clarification` event, respond, assert search completes
 - Write `test_3_round_breach.py`: send maximally ambiguous query, respond vaguely 3 times, assert defaults applied and search completes
 - Write `test_rate_limiting.py`: send 11 searches from the same test IP, assert 429 on the 11th
 - Write `test_session_expiry.py`: create session, wait (or mock TTL), assert new session behavior
+- Write `test_property_scraping.py`: send a complete query with `ENABLE_PROPERTY_SCRAPING=true`, assert `property_links` are included in `portal_card` events with valid URLs; also test with flag disabled to assert empty `property_links` array
 - All tests use the dev API endpoint and a dedicated test session prefix
 - Add integration test step to the dev deploy pipeline (post smoke test)
 
 **Acceptance Criteria:**
 - Happy path test completes successfully with valid portal cards (NoBroker and/or 99acres)
+- Happy path test verifies `property_links` array is present in `portal_card` events
 - Clarification flow test receives exactly one question per round
 - 3-round breach test receives results with default-applied notes
 - Rate limit test correctly enforces the 10-search daily limit
+- Property scraping test validates individual property URLs are live and correctly structured
+- Property scraping feature flag toggle test passes (enabled → links present; disabled → empty array)
 - All integration tests pass against the dev environment
 - Tests clean up their own session/rate-limit data
+
 
 **Status:** Not Started
 
 ---
 
-## US-34 — Input Validation & Sanitization
+## US-7.2 — Input Validation & Sanitization
 
 **User Story:**
 As a **security engineer**,
@@ -65,7 +70,7 @@ So that the system is protected against prompt injection and malformed input att
 
 ---
 
-## US-35 — Performance Validation
+## US-7.3 — Performance Validation
 
 **User Story:**
 As a **platform operator**,
@@ -95,7 +100,7 @@ So that I have confidence in the user experience before launch.
 
 ---
 
-## US-36 — Documentation & Operational Runbook
+## US-7.4 — Documentation & Operational Runbook
 
 **User Story:**
 As a **new team member**,
@@ -131,7 +136,7 @@ So that I can set up the project locally, understand the architecture, and handl
 
 ---
 
-## US-37 — Portal Config Validation & Maintenance
+## US-7.5 — Portal Config Validation & Maintenance
 
 **User Story:**
 As a **platform operator**,

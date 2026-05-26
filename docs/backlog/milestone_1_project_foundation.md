@@ -4,7 +4,7 @@
 
 ---
 
-## US-01 — Mono-Repo Scaffolding
+## US-1.1 — Mono-Repo Scaffolding
 
 **User Story:**
 As a **developer**,
@@ -42,7 +42,7 @@ So that I can navigate the codebase efficiently and each team can work independe
 
 ---
 
-## US-02 — Python Backend Dev Environment
+## US-1.2 — Python Backend Dev Environment
 
 **User Story:**
 As a **backend developer**,
@@ -66,7 +66,7 @@ So that I can write consistent, high-quality code from day one.
 
 ---
 
-## US-03 — Frontend Dev Environment
+## US-1.3 — Frontend Dev Environment
 
 **User Story:**
 As a **frontend developer**,
@@ -93,7 +93,7 @@ So that I can begin building the chat interface with proper tooling.
 
 ---
 
-## US-04 — Terraform State Backend
+## US-1.4 — Terraform State Backend
 
 **User Story:**
 As a **DevOps engineer**,
@@ -126,7 +126,7 @@ So that infrastructure state is stored securely and concurrent applies are safe.
 
 ---
 
-## US-05 — Portal Adapter Configuration
+## US-1.5 — Portal Adapter Configuration
 
 **User Story:**
 As a **backend developer**,

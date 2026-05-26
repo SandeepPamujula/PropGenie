@@ -4,7 +4,7 @@
 
 ---
 
-## US-17 — Chat Interface Layout & Design System
+## US-4.1 — Chat Interface Layout & Design System
 
 **User Story:**
 As a **property seeker**,
@@ -43,7 +43,7 @@ So that I have a delightful experience searching for properties.
 
 ---
 
-## US-18 — Session Management (Client-Side)
+## US-4.2 — Session Management (Client-Side)
 
 **User Story:**
 As a **property seeker**,
@@ -76,7 +76,7 @@ So that I don't have to repeat information I've already provided.
 
 ---
 
-## US-19 — SSE Stream Consumer & Message Rendering
+## US-4.3 — SSE Stream Consumer & Message Rendering
 
 **User Story:**
 As a **property seeker**,
@@ -113,7 +113,7 @@ So that I know the system is working and can follow its progress.
 
 ---
 
-## US-20 — Portal Card Component
+## US-4.4 — Portal Card Component
 
 **User Story:**
 As a **property seeker**,
@@ -168,7 +168,7 @@ So that I can quickly compare results across portals and navigate to the one I p
 
 ---
 
-## US-21 — Rate Limit UI Handling
+## US-4.5 — Rate Limit UI Handling
 
 **User Story:**
 As a **property seeker**,
@@ -195,7 +195,7 @@ So that I understand why I can't search and know when I can try again.
 
 ---
 
-## US-22 — Error Handling & Edge Cases
+## US-4.6 — Error Handling & Edge Cases
 
 **User Story:**
 As a **property seeker**,
@@ -224,7 +224,7 @@ So that the application never shows a broken state or raw error messages.
 
 ---
 
-## US-23 — Frontend Component Tests
+## US-4.7 — Frontend Component Tests
 
 **User Story:**
 As a **frontend developer**,
