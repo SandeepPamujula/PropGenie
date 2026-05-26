@@ -31,6 +31,7 @@ class AgentState(TypedDict):
     llm_calls: int
     total_input_tokens: int
     total_output_tokens: int
+    trace: Optional[Any]
 
 
 def get_initial_state(session_id: str, ip: str) -> AgentState:
@@ -61,4 +62,5 @@ def get_initial_state(session_id: str, ip: str) -> AgentState:
         "llm_calls": 0,
         "total_input_tokens": 0,
         "total_output_tokens": 0,
+        "trace": None,
     }

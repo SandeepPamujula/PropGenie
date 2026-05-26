@@ -1,6 +1,6 @@
 import json
 from typing import Any
-from langfuse.decorators import observe, langfuse_context
+from observability.langfuse_tracer import create_span, end_span
 from models.state import AgentState
 
 def format_currency(value: int) -> str:
@@ -16,20 +16,19 @@ def format_currency(value: int) -> str:
         return f"₹{val:g}K"
     return f"₹{value}"
 
-@observe(name="response_formatter")  # type: ignore[misc]
 def response_formatter_node(state: AgentState) -> dict[str, Any]:
     """
     Synthesizes search results into a clean, markdown chat response and portal cards.
     """
+    import time
     print("[Response Formatter Agent] Started execution")
+    start_time = time.time()
     
-    langfuse_context.update_current_trace(
-        session_id=state.get("session_id"),
-        user_id=state.get("ip"),
-        tags=["propgenie", "response_formatter"]
-    )
-    
+    validated_urls = state.get("validated_urls", [])
     intent = str(state.get("intent") or "rent").lower()
+    
+    trace = state.get("trace")
+    span = create_span(trace, "response_formatter", validated_urls)
     city = state.get("city") or ""
     location_anchor = state.get("location_anchor") or ""
     property_type = state.get("property_type") or ""
@@ -125,6 +124,14 @@ def response_formatter_node(state: AgentState) -> dict[str, Any]:
     }
 
     print(f"[Response Formatter Agent] Completed. Formatted {len(formatted_urls)} URLs.")
+    
+    # End Langfuse span
+    latency_ms = int((time.time() - start_time) * 1000)
+    metrics = {
+        "latency": latency_ms
+    }
+    
+    end_span(span, formatted_urls, metrics)
     
     return {
         "validated_urls": formatted_urls,

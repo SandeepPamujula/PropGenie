@@ -3,7 +3,12 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 from langchain_aws import ChatBedrock
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from langfuse.decorators import observe, langfuse_context
+from observability.langfuse_tracer import (
+    create_span,
+    end_span,
+    LLAMA_3_1_70B_INPUT_COST_PER_TOKEN,
+    LLAMA_3_1_70B_OUTPUT_COST_PER_TOKEN
+)
 from models.state import AgentState
 
 # System Prompt for the Clarification Agent
@@ -31,19 +36,16 @@ Tone and Formatting Guidelines:
 - Output ONLY the natural language question to ask the user. Do not wrap the output in JSON, markdown code blocks, or any other formatting. Just output the question text.
 """
 
-@observe(name="clarification")  # type: ignore[misc]
 def clarification_node(state: AgentState) -> dict[str, Any]:
     """
     Asks clarifying questions if user query is ambiguous, or applies defaults on 3-round breach.
     """
+    import time
     print("[Clarification Agent] Started execution")
+    start_time = time.time()
     
-    # 1. Update trace metadata in Langfuse
-    langfuse_context.update_current_trace(
-        session_id=state.get("session_id"),
-        user_id=state.get("ip"),
-        tags=["propgenie", "clarification"]
-    )
+    trace = state.get("trace")
+    span = create_span(trace, "clarification", state.get("pending_fields", []))
     
     # 2. Check 3-round breach logic (if clarification_round is 3 or more)
     round_count = state.get("clarification_round", 0)
@@ -79,6 +81,17 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
             "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         })
         updates["messages"] = messages
+        
+        # End Langfuse span
+        latency_ms = int((time.time() - start_time) * 1000)
+        metrics = {
+            "latency": latency_ms,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "cost": 0.0
+        }
+        end_span(span, note, metrics)
         
         return updates
 
@@ -154,6 +167,23 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
         "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     })
     updates["messages"] = messages
+    
+    # End Langfuse span
+    latency_ms = int((time.time() - start_time) * 1000)
+    init_input_tokens = state.get("total_input_tokens", 0)
+    init_output_tokens = state.get("total_output_tokens", 0)
+    added_input_tokens = updates.get("total_input_tokens", init_input_tokens) - init_input_tokens
+    added_output_tokens = updates.get("total_output_tokens", init_output_tokens) - init_output_tokens
+    
+    metrics = {
+        "latency": latency_ms,
+        "input_tokens": added_input_tokens,
+        "output_tokens": added_output_tokens,
+        "total_tokens": added_input_tokens + added_output_tokens,
+        "cost": added_input_tokens * LLAMA_3_1_70B_INPUT_COST_PER_TOKEN + added_output_tokens * LLAMA_3_1_70B_OUTPUT_COST_PER_TOKEN
+    }
+    
+    end_span(span, question_text, metrics)
     
     return updates
 

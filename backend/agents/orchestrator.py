@@ -3,7 +3,12 @@ import re
 from typing import Any, Optional
 from langchain_aws import ChatBedrock
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from langfuse.decorators import observe, langfuse_context
+from observability.langfuse_tracer import (
+    create_span,
+    end_span,
+    LLAMA_3_1_70B_INPUT_COST_PER_TOKEN,
+    LLAMA_3_1_70B_OUTPUT_COST_PER_TOKEN
+)
 from models.state import AgentState
 
 # System Prompt for the Orchestrator Agent
@@ -116,19 +121,23 @@ def extract_json(text: str) -> dict[str, Any]:
             
     raise ValueError(f"Could not parse valid JSON from LLM response: {text}")
 
-@observe(name="orchestrator")  # type: ignore[misc]
 def orchestrator_node(state: AgentState) -> dict[str, Any]:
     """
     Classifies search intent and extracts entities from natural language user input using Amazon Bedrock.
     """
+    import time
     print("[Orchestrator Agent] Started execution")
+    start_time = time.time()
     
-    # 1. Update trace metadata in Langfuse
-    langfuse_context.update_current_trace(
-        session_id=state.get("session_id"),
-        user_id=state.get("ip"),
-        tags=["propgenie", "orchestrator"]
-    )
+    # Get user message
+    user_message = ""
+    for msg in reversed(state.get("messages", [])):
+        if msg.get("role") == "user":
+            user_message = msg.get("content", "")
+            break
+            
+    trace = state.get("trace")
+    span = create_span(trace, "orchestrator", user_message)
     
     # 2. Increment clarification round tracking
     current_round = state.get("clarification_round", 0) + 1
@@ -244,5 +253,34 @@ def orchestrator_node(state: AgentState) -> dict[str, Any]:
             
     updates["pending_fields"] = pending_fields
     print(f"[Orchestrator Agent] Completed. Pending fields: {pending_fields}")
+    
+    # End Langfuse span
+    latency_ms = int((time.time() - start_time) * 1000)
+    init_input_tokens = state.get("total_input_tokens", 0)
+    init_output_tokens = state.get("total_output_tokens", 0)
+    added_input_tokens = updates.get("total_input_tokens", init_input_tokens) - init_input_tokens
+    added_output_tokens = updates.get("total_output_tokens", init_output_tokens) - init_output_tokens
+    
+    metrics = {
+        "latency": latency_ms,
+        "input_tokens": added_input_tokens,
+        "output_tokens": added_output_tokens,
+        "total_tokens": added_input_tokens + added_output_tokens,
+        "cost": added_input_tokens * LLAMA_3_1_70B_INPUT_COST_PER_TOKEN + added_output_tokens * LLAMA_3_1_70B_OUTPUT_COST_PER_TOKEN
+    }
+    
+    output_data = {
+        "intent": updates.get("intent"),
+        "city": updates.get("city"),
+        "location_anchor": updates.get("location_anchor"),
+        "property_type": updates.get("property_type"),
+        "bhk": updates.get("bhk"),
+        "budget_min": updates.get("budget_min"),
+        "budget_max": updates.get("budget_max"),
+        "radius_km": updates.get("radius_km"),
+        "pending_fields": pending_fields
+    }
+    
+    end_span(span, output_data, metrics)
     
     return updates

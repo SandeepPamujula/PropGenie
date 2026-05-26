@@ -12,6 +12,7 @@ from db.search_logger import log_search
 from langgraph.graph import END, StateGraph
 from models.state import AgentState, get_initial_state
 from utils.rate_limiter import increment_rate_limit
+from observability.langfuse_tracer import create_trace, flush_traces, update_trace_metadata
 
 
 def restore_state(state: AgentState) -> dict[str, Any]:
@@ -22,7 +23,7 @@ def restore_state(state: AgentState) -> dict[str, Any]:
     print("[Graph Node] restore_state executed")
     session_id = state.get("session_id", "")
     if not session_id:
-        return {"session_id": ""}
+        return {"session_id": "", "trace": state.get("trace")}
 
     session = get_session(session_id)
     if session:
@@ -63,12 +64,13 @@ def restore_state(state: AgentState) -> dict[str, Any]:
             "llm_calls": graph_state.get("llm_calls", 0),
             "total_input_tokens": graph_state.get("total_input_tokens", 0),
             "total_output_tokens": graph_state.get("total_output_tokens", 0),
+            "trace": state.get("trace"),
         }
     else:
         # Create session if it does not exist
         ip = state.get("ip", "")
         create_session(session_id, ip)
-        state_update = {"session_id": session_id, "start_time": time.time()}
+        state_update = {"session_id": session_id, "start_time": time.time(), "trace": state.get("trace")}
         update_session(session_id, state)
         return state_update
 
@@ -91,6 +93,28 @@ def save_state(state: AgentState) -> dict[str, Any]:
             
     if session_id:
         update_session(session_id, state)
+        
+    # Update Langfuse trace metadata with final stats
+    trace = state.get("trace")
+    if trace:
+        generated = state.get("generated_urls", [])
+        validated = state.get("validated_urls", [])
+        
+        # A hallucination is detected if we generated URLs but all/some failed validation/liveness
+        # and got dropped.
+        hallucination_detected = len(generated) > len(validated)
+        
+        metadata = {
+            "clarification_rounds": state.get("clarification_round", 0),
+            "hallucination_detected": hallucination_detected,
+        }
+        tags = ["propgenie"]
+        if hallucination_detected:
+            tags.append("hallucination_detected")
+            
+        update_trace_metadata(trace, metadata=metadata, tags=tags)
+        flush_traces()
+        
     return {"session_id": session_id}
 
 
@@ -185,6 +209,10 @@ def generate_graph_sse(
     # 2. Compile graph and run
     compiled_graph = create_graph()
     state = get_initial_state(session_id, ip)
+    
+    # Initialize Langfuse trace
+    trace = create_trace(session_id, ip)
+    state["trace"] = trace
 
     # Add user message to state
     state["messages"].append(
@@ -321,3 +349,5 @@ def generate_graph_sse(
             'message': f'An execution error occurred: {str(e)}',
             'retryable': True
         })}\n\n"
+    finally:
+        flush_traces()
