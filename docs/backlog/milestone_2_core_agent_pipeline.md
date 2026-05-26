@@ -480,7 +480,21 @@ So that scraped property URLs flow through the graph correctly and are persisted
 - SSE stream includes an `agent_status` event for `property_scraper`
 - Existing unit tests continue to pass with schema changes
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **State Integration**: Formally registered `property_scraper_node` in the LangGraph state machine flow, establishing the sequential transition sequence `url_validator` -> `property_scraper` -> `response_formatter` -> `save_state`.
+  - **Database Persistence**: Updated both `create_session` and `update_session` database operations inside [session_manager.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/db/session_manager.py) to store/update the `scraped_property_urls` and `validated_property_urls` list fields under `graph_state` in the MongoDB session documents, and ensured `restore_state` recovers them.
+  - **SSE Streaming Extension**: Added SSE generator status yields for the `property_scraper` node to signal client interfaces when the listing crawler is actively running.
+- **Key Files Created/Modified**:
+  - [graph.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/graph.py): Integrated node registration, edge flows, state restoration, and SSE streaming message yields.
+  - [session_manager.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/db/session_manager.py): Added persistence and creation initialization for scraped and validated property listing URL lists.
+  - [test_graph.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_graph.py): Updated expected happy path and three-round breach execution orders to assert node calls.
+  - [test_session_manager.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_session_manager.py): Extended MongoDB mock asserts to verify proper property URL persistence.
+- **Verification/Testing Steps**:
+  - Validated type safety using MyPy, passing with zero issues across all modified files and unit tests.
+  - Executed all 86 unit and integration tests via PyTest, achieving a 100% pass rate.
 
 ---
 

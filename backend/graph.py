@@ -4,6 +4,7 @@ from typing import Any, Generator
 
 from agents.clarification import clarification_node
 from agents.orchestrator import orchestrator_node
+from agents.property_scraper import property_scraper_node
 from agents.query_builder import query_builder_node
 from agents.response_formatter import response_formatter_node
 from agents.url_validator import url_validator_node
@@ -57,6 +58,8 @@ def restore_state(state: AgentState) -> dict[str, Any]:
             "messages": stored_messages,
             "generated_urls": graph_state.get("generated_urls", []),
             "validated_urls": graph_state.get("validated_urls", []),
+            "scraped_property_urls": graph_state.get("scraped_property_urls", []),
+            "validated_property_urls": graph_state.get("validated_property_urls", []),
             "search_meta": graph_state.get("search_meta"),
             "error": graph_state.get("error"),
             "proceed_with_defaults": graph_state.get("proceed_with_defaults"),
@@ -156,6 +159,7 @@ def create_graph() -> Any:
     workflow.add_node("clarification", clarification_node)
     workflow.add_node("query_builder", query_builder_node)
     workflow.add_node("url_validator", url_validator_node)
+    workflow.add_node("property_scraper", property_scraper_node)
     workflow.add_node("response_formatter", response_formatter_node)
     workflow.add_node("save_state", save_state)
 
@@ -179,9 +183,10 @@ def create_graph() -> Any:
     # Linear edge from clarification to save_state
     workflow.add_edge("clarification", "save_state")
 
-    # Linear pipeline from query_builder to response_formatter to save_state
+    # Linear pipeline from query_builder to property_scraper to response_formatter to save_state
     workflow.add_edge("query_builder", "url_validator")
-    workflow.add_edge("url_validator", "response_formatter")
+    workflow.add_edge("url_validator", "property_scraper")
+    workflow.add_edge("property_scraper", "response_formatter")
     workflow.add_edge("response_formatter", "save_state")
 
     # Terminal edge from save_state to the end of execution
@@ -294,6 +299,13 @@ def generate_graph_sse(
                         'type': 'agent_status',
                         'agent': 'url_validator',
                         'message': 'Validating search URLs...',
+                        'timestamp': timestamp
+                    })}\n\n"
+                elif node_name == "property_scraper":
+                    yield f"event: agent_status\ndata: {json.dumps({
+                        'type': 'agent_status',
+                        'agent': 'property_scraper',
+                        'message': 'Fetching top property listings...',
                         'timestamp': timestamp
                     })}\n\n"
                 elif node_name == "response_formatter":
