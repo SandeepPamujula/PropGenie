@@ -4,7 +4,12 @@ from datetime import datetime, timezone
 from typing import Any
 from langchain_aws import ChatBedrock
 from langchain_core.messages import SystemMessage
-from langfuse.decorators import observe, langfuse_context
+from observability.langfuse_tracer import (
+    create_span,
+    end_span,
+    LLAMA_3_1_70B_INPUT_COST_PER_TOKEN,
+    LLAMA_3_1_70B_OUTPUT_COST_PER_TOKEN
+)
 from models.state import AgentState
 from utils.config_loader import load_portal_configs
 
@@ -90,19 +95,26 @@ def extract_json(text: str) -> dict[str, Any]:
             
     raise ValueError(f"Could not parse valid JSON from LLM response: {text}")
 
-@observe(name="query_builder")  # type: ignore[misc]
 def query_builder_node(state: AgentState) -> dict[str, Any]:
     """
     Builds parameterized URLs for all target portals using resolved localities and configs.
     """
+    import time
     print("[Query Builder Agent] Started execution")
+    start_time = time.time()
     
-    # 1. Update trace metadata in Langfuse
-    langfuse_context.update_current_trace(
-        session_id=state.get("session_id"),
-        user_id=state.get("ip"),
-        tags=["propgenie", "query_builder"]
-    )
+    resolved_entities = {
+        "city": state.get("city"),
+        "location_anchor": state.get("location_anchor"),
+        "property_type": state.get("property_type"),
+        "bhk": state.get("bhk"),
+        "budget_min": state.get("budget_min"),
+        "budget_max": state.get("budget_max"),
+        "radius_km": state.get("radius_km")
+    }
+    
+    trace = state.get("trace")
+    span = create_span(trace, "query_builder", resolved_entities)
     
     updates: dict[str, Any] = {}
     
@@ -149,6 +161,17 @@ def query_builder_node(state: AgentState) -> dict[str, Any]:
             content = response.content if hasattr(response, "content") else response
             response_text = str(content).strip()
             print(f"[Query Builder Agent] LLM Raw Mapping Response: {response_text}")
+            
+            # Accumulate usage statistics
+            updates["llm_calls"] = state.get("llm_calls", 0) + 1
+            if hasattr(response, "response_metadata") and "usage" in response.response_metadata:
+                usage = response.response_metadata["usage"]
+                updates["total_input_tokens"] = state.get("total_input_tokens", 0) + usage.get("input_tokens", 0)
+                updates["total_output_tokens"] = state.get("total_output_tokens", 0) + usage.get("output_tokens", 0)
+            elif hasattr(response, "usage_metadata") and response.usage_metadata:
+                usage = response.usage_metadata
+                updates["total_input_tokens"] = state.get("total_input_tokens", 0) + usage.get("input_tokens", 0)
+                updates["total_output_tokens"] = state.get("total_output_tokens", 0) + usage.get("output_tokens", 0)
             
             extracted = extract_json(response_text)
             resolved_localities["nobroker"] = extracted.get("nobroker")
@@ -265,6 +288,23 @@ def query_builder_node(state: AgentState) -> dict[str, Any]:
                         
     updates["generated_urls"] = generated_urls
     print(f"[Query Builder Agent] Completed. Generated URLs: {generated_urls}")
+    
+    # End Langfuse span
+    latency_ms = int((time.time() - start_time) * 1000)
+    init_input_tokens = state.get("total_input_tokens", 0)
+    init_output_tokens = state.get("total_output_tokens", 0)
+    added_input_tokens = updates.get("total_input_tokens", init_input_tokens) - init_input_tokens
+    added_output_tokens = updates.get("total_output_tokens", init_output_tokens) - init_output_tokens
+    
+    metrics = {
+        "latency": latency_ms,
+        "input_tokens": added_input_tokens,
+        "output_tokens": added_output_tokens,
+        "total_tokens": added_input_tokens + added_output_tokens,
+        "cost": added_input_tokens * LLAMA_3_1_70B_INPUT_COST_PER_TOKEN + added_output_tokens * LLAMA_3_1_70B_OUTPUT_COST_PER_TOKEN
+    }
+    
+    end_span(span, generated_urls, metrics)
     
     return updates
 

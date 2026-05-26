@@ -102,7 +102,8 @@ def test_restore_state_node_new_session() -> None:
     state["messages"].append({"role": "user", "content": "hello", "ts": "2026-05-19T19:00:00Z"})
 
     result = restore_state(state)
-    assert result == {"session_id": session_id}
+    assert result.get("session_id") == session_id
+    assert "start_time" in result
 
     # Verify session was created in DB
     stored = get_session(session_id)

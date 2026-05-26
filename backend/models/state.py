@@ -26,6 +26,12 @@ class AgentState(TypedDict):
     search_meta: Optional[dict[str, Any]]
     error: Optional[str]
     proceed_with_defaults: Optional[bool]
+    search_completed: Optional[bool]
+    start_time: Optional[float]
+    llm_calls: int
+    total_input_tokens: int
+    total_output_tokens: int
+    trace: Optional[Any]
 
 
 def get_initial_state(session_id: str, ip: str) -> AgentState:
@@ -51,4 +57,10 @@ def get_initial_state(session_id: str, ip: str) -> AgentState:
         "search_meta": None,
         "error": None,
         "proceed_with_defaults": None,
+        "search_completed": None,
+        "start_time": None,
+        "llm_calls": 0,
+        "total_input_tokens": 0,
+        "total_output_tokens": 0,
+        "trace": None,
     }

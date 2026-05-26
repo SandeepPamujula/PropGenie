@@ -3,7 +3,7 @@ import urllib.error
 import urllib.request
 from typing import Any
 from urllib.parse import parse_qs, urlparse
-from langfuse.decorators import observe, langfuse_context
+from observability.langfuse_tracer import create_span, end_span
 from models.state import AgentState
 
 def validate_url_structure(url: str, intent: str) -> str | None:
@@ -126,23 +126,20 @@ def check_liveness(url: str) -> tuple[int | None, str | None]:
     except Exception as e:
         return None, f"Timeout/Error: {str(e)}"
 
-@observe(name="url_validator")  # type: ignore[misc]
 def url_validator_node(state: AgentState) -> dict[str, Any]:
     """
     Validates generated portal search URLs structurally and tests their live connection.
     Drops invalid or dead URLs and logs validation metrics.
     """
+    import time
     print("[URL Validator Agent] Started execution")
-    
-    # 1. Update trace metadata in Langfuse
-    langfuse_context.update_current_trace(
-        session_id=state.get("session_id"),
-        user_id=state.get("ip"),
-        tags=["propgenie", "url_validator"]
-    )
+    start_time = time.time()
     
     generated_urls = state.get("generated_urls", [])
     intent = state.get("intent") or "rent"
+    
+    trace = state.get("trace")
+    span = create_span(trace, "url_validator", generated_urls)
     
     # Track dropped info for internal diagnostics
     dropped_info: dict[str, str] = {}
@@ -187,17 +184,32 @@ def url_validator_node(state: AgentState) -> dict[str, Any]:
                     dropped_info[url] = f"HEAD Exception: {str(e)}"
                     
     # 4. Observability tagging for hallucinations / drops
-    if len(dropped_info) > 0:
-        langfuse_context.update_current_trace(
-            tags=["propgenie", "url_validator", "hallucination_detected"],
+    hallucination_detected = len(dropped_info) > 0
+    if hallucination_detected:
+        from observability.langfuse_tracer import update_trace_metadata
+        update_trace_metadata(
+            trace,
             metadata={
                 "hallucination_detected": True,
                 "dropped_urls": dropped_info,
                 "dropped_urls_count": len(dropped_info)
-            }
+            },
+            tags=["propgenie", "url_validator", "hallucination_detected"]
         )
         
     print(f"[URL Validator Agent] Completed. Validated: {len(validated_list)}, Dropped: {len(dropped_info)}")
+    
+    # End Langfuse span
+    latency_ms = int((time.time() - start_time) * 1000)
+    metrics = {
+        "latency": latency_ms,
+        "hallucination_detected": hallucination_detected,
+        "dropped_urls_count": len(dropped_info),
+        "dropped_urls": dropped_info
+    }
+    
+    end_span(span, validated_list, metrics)
+    
     return {
         "validated_urls": validated_list
     }

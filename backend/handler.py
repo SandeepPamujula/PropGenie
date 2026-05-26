@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from graph import generate_graph_sse
+from utils.rate_limiter import check_rate_limit, RateLimitExceededException, get_next_ist_midnight_string
 
 
 def lambda_handler(event: dict[str, Any], *args: Any) -> Any:
@@ -81,6 +82,20 @@ def lambda_handler(event: dict[str, Any], *args: Any) -> Any:
             ip = x_forwarded_for.split(",")[0].strip()
         else:
             ip = http_info.get("sourceIp", "127.0.0.1")
+
+        # 3.1 Rate Limit Check
+        try:
+            check_rate_limit(ip)
+        except RateLimitExceededException:
+            return {
+                "statusCode": 429,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "error": "rate_limit_exceeded",
+                    "message": "You've reached your daily search limit of 10. Please try again tomorrow!",
+                    "reset_at": get_next_ist_midnight_string()
+                }),
+            }
 
         # Parse request body (handling potential Base64 encoding from AWS API Gateway/Lambda URL)
         body_str = event.get("body") or "{}"
