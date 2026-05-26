@@ -9,7 +9,9 @@ from html.parser import HTMLParser
 import re
 
 from models.state import AgentState
+from utils.constants import PropertyScraperConstants
 from observability.langfuse_tracer import create_span, end_span
+from agents.url_validator import validate_scraped_properties
 
 class ALinkExtractor(HTMLParser):
     def __init__(self) -> None:
@@ -44,7 +46,7 @@ def extract_properties_from_html(html: str, portal: str) -> List[str]:
             
             if portal == "NoBroker":
                 # Check domain compatibility (if specified, must contain nobroker.in)
-                if netloc and "nobroker.in" not in netloc:
+                if netloc and PropertyScraperConstants.NOBROKER_DOMAIN not in netloc:
                     continue
                 # Match /property/rent/<city>/<locality>/<property-id> 
                 # or /property/sale/<city>/<locality>/<property-id>
@@ -53,7 +55,7 @@ def extract_properties_from_html(html: str, portal: str) -> List[str]:
                     # path.split('/') yields ['', 'property', 'rent/sale', 'city', 'locality', 'property-id']
                     # removing empty strings leaves: ['property', 'rent/sale', 'city', 'locality', 'property-id'] (length >= 5)
                     parts = [p for p in path.split('/') if p]
-                    if len(parts) >= 5:
+                    if len(parts) >= PropertyScraperConstants.NOBROKER_MIN_PATH_SEGMENTS:
                         abs_url = href if netloc else f"https://www.nobroker.in{path}"
                         if abs_url not in seen:
                             seen.add(abs_url)
@@ -61,16 +63,14 @@ def extract_properties_from_html(html: str, portal: str) -> List[str]:
                             
             elif portal == "99acres":
                 # Check domain compatibility (if specified, must contain 99acres.com)
-                if netloc and "99acres.com" not in netloc:
+                if netloc and PropertyScraperConstants.ACRES_DOMAIN not in netloc:
                     continue
                 # Match /<locality>-<city>/.../<property-id>
                 # The first non-empty segment must match locality-city slug pattern
                 parts = [p for p in path.split('/') if p]
-                if len(parts) >= 2:
+                if len(parts) >= PropertyScraperConstants.ACRES_MIN_PATH_SEGMENTS:
                     first_seg = parts[0]
-                    # Supported city name check (bangalore, mumbai, pune, chennai, hyderabad, delhi-ncr, delhi)
-                    pattern = r"^[a-zA-Z0-9-]+-(?:bangalore|mumbai|pune|chennai|hyderabad|delhi-ncr|delhi)$"
-                    if re.match(pattern, first_seg, re.IGNORECASE):
+                    if re.match(PropertyScraperConstants.ACRES_CITY_PATTERN, first_seg, re.IGNORECASE):
                         abs_url = href if netloc else f"https://www.99acres.com{path}"
                         if abs_url not in seen:
                             seen.add(abs_url)
@@ -86,8 +86,8 @@ def fetch_url(url: str, timeout: float = 5.0) -> tuple[Optional[str], Optional[s
     Returns (html_content, error_message).
     """
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+        "User-Agent": PropertyScraperConstants.USER_AGENT,
+        "Accept": PropertyScraperConstants.ACCEPT_HEADER
     }
     try:
         req = urllib.request.Request(url, headers=headers)
@@ -116,35 +116,37 @@ def property_scraper_node(state: AgentState) -> Dict[str, Any]:
     start_time = time.time()
     
     # 1. Feature Flag Check
-    enable_scraping = os.environ.get("ENABLE_PROPERTY_SCRAPING", "false").lower() == "true"
+    enable_scraping = os.environ.get(PropertyScraperConstants.ENV_ENABLE_SCRAPING, "false").lower() == "true"
     if not enable_scraping:
-        print("[Property Scraper Agent] Feature disabled (ENABLE_PROPERTY_SCRAPING != true)")
+        print(f"[Property Scraper Agent] Feature disabled ({PropertyScraperConstants.ENV_ENABLE_SCRAPING} != true)")
         return {
-            "scraped_property_urls": []
+            "scraped_property_urls": [],
+            "validated_property_urls": []
         }
         
     validated_urls = state.get("validated_urls", [])
     if not validated_urls:
         print("[Property Scraper Agent] No validated portal search URLs to scrape")
         return {
-            "scraped_property_urls": []
+            "scraped_property_urls": [],
+            "validated_property_urls": []
         }
         
     trace = state.get("trace")
     span = create_span(trace, "property_scraper", validated_urls)
     
     # Configuration
-    timeout_str = os.environ.get("PROPERTY_SCRAPING_TIMEOUT", "5.0")
+    timeout_str = os.environ.get(PropertyScraperConstants.ENV_TIMEOUT, str(PropertyScraperConstants.TIMEOUT_DEFAULT))
     try:
         timeout = float(timeout_str)
     except ValueError:
-        timeout = 5.0
+        timeout = PropertyScraperConstants.TIMEOUT_DEFAULT
         
-    max_scraped_str = os.environ.get("MAX_SCRAPED_PROPERTIES", "5")
+    max_scraped_str = os.environ.get(PropertyScraperConstants.ENV_MAX_PROPERTIES, str(PropertyScraperConstants.MAX_PROPERTIES_DEFAULT))
     try:
         max_scraped = int(max_scraped_str)
     except ValueError:
-        max_scraped = 5
+        max_scraped = PropertyScraperConstants.MAX_PROPERTIES_DEFAULT
         
     scraped_results: List[Dict[str, Any]] = []
     
@@ -175,7 +177,7 @@ def property_scraper_node(state: AgentState) -> Dict[str, Any]:
                 # Take top 5 links per portal search URL
                 portal_scraped_count = 0
                 for link in links:
-                    if portal_scraped_count >= 5:
+                    if portal_scraped_count >= PropertyScraperConstants.PORTAL_LIMIT:
                         break
                     scraped_results.append({
                         "url": link,
@@ -188,17 +190,24 @@ def property_scraper_node(state: AgentState) -> Dict[str, Any]:
                 
     # Cap total scraped results across all portals
     scraped_results = scraped_results[:max_scraped]
-    print(f"[Property Scraper Agent] Completed. Total scraped links: {len(scraped_results)}")
+    
+    # 2. Validation step
+    search_urls = [item["url"] for item in validated_urls]
+    validated_results = validate_scraped_properties(scraped_results, search_urls, trace)
+    
+    print(f"[Property Scraper Agent] Completed. Total scraped links: {len(scraped_results)}, Validated: {len(validated_results)}")
     
     # End Langfuse span
     latency_ms = int((time.time() - start_time) * 1000)
     metrics = {
         "latency": latency_ms,
         "scraped_count": len(scraped_results),
+        "validated_count": len(validated_results),
         "urls": [item["url"] for item in scraped_results]
     }
     end_span(span, scraped_results, metrics)
     
     return {
-        "scraped_property_urls": scraped_results
+        "scraped_property_urls": scraped_results,
+        "validated_property_urls": validated_results
     }

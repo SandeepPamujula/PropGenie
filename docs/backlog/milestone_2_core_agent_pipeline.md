@@ -433,7 +433,20 @@ So that I never receive broken, expired, or fabricated property listing links.
 - Dropped property URLs are tagged in Langfuse trace metadata
 - Unit tests cover each validation rule independently
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Grouped Constants Compliance**: Defined `URLValidatorConstants` to encapsulate whitelisted domains, minimum path segment counts, city regex mappings, budget bounds, and HEAD timeouts, aligning with the `constants_rule`.
+  - **Structural and Liveness Rules**: Property links are validated structurally (excluding duplicates of the search URL, verifying domains, checking segment counts, and ensuring city prefixes are supported) before launching concurrent HEAD checks using `ThreadPoolExecutor` with a strict 2-second timeout.
+  - **Trace Hallucination Flagging**: Integrates Langfuse trace metadata tagging to record any dropped property listing links, setting the hallucination flag and recording exact error logs for diagnostics.
+- **Key Files Created/Modified**:
+  - [url_validator.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/url_validator.py): Added structural property checking, concurrent liveness check logic, and updated trace metadata.
+  - [property_scraper.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/property_scraper.py): Cleaned up magic values using constants class and integrated validation phase.
+  - [test_property_scraper.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_property_scraper.py): Added direct unit test assertions for property link validation rules.
+- **Verification/Testing Steps**:
+  - mypy static type checking verified: 0 issues.
+  - pytest run successfully: 86 passing tests.
 
 ---
 
