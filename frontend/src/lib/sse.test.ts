@@ -19,8 +19,8 @@ describe('sse', () => {
     const ssePayloads: string[] = [
       'event: agent_status\ndata: {"type": "agent_status", "agent": "orchestrator", "message": "Understanding your search...", "timestamp": "2026-05-19T12:00:00Z"}\n\n',
       'event: clarification\ndata: {"type": "clarification", "message": "What is your budget?", "round": 1, "max_rounds": 3, "resolved_fields": {}, "missing_fields": ["budget"]}\n\n',
-      'event: portal_card\ndata: {"portal": "nobroker", "label": "NoBroker Link", "summary": "2BHK Indiranagar", "url": "https://nobroker.in", "isPriority": true}\n\n',
-      'event: search_meta\ndata: {"type": "search_meta", "portals_searched": 2, "portals_returned": 2, "portals_dropped": [], "clarification_rounds": 1, "defaults_applied": []}\n\n',
+      'event: portal_card\ndata: {"portal": "nobroker", "label": "NoBroker Link", "summary": "2BHK Indiranagar", "url": "https://nobroker.in", "isPriority": true, "property_links": [{"url": "https://nobroker.in/prop1", "portal": "NoBroker", "rank": 1, "validation": {"schema_valid": true, "head_status": 200}}]}\n\n',
+      'event: search_meta\ndata: {"type": "search_meta", "portals_searched": 2, "portals_returned": 2, "portals_dropped": [], "property_links_count": 1, "clarification_rounds": 1, "defaults_applied": []}\n\n',
       'event: error\ndata: {"type": "error", "message": "An execution error occurred", "retryable": true}\n\n',
       'event: done\ndata: {"type": "done", "session_id": "test-session", "search_count_today": 3, "search_limit": 10}\n\n',
     ]
@@ -65,6 +65,14 @@ describe('sse', () => {
         summary: '2BHK Indiranagar',
         url: 'https://nobroker.in',
         isPriority: true,
+        property_links: [
+          {
+            url: 'https://nobroker.in/prop1',
+            portal: 'NoBroker',
+            rank: 1,
+            validation: { schema_valid: true, head_status: 200 },
+          },
+        ],
       },
     })
 
@@ -75,6 +83,7 @@ describe('sse', () => {
         portals_searched: 2,
         portals_returned: 2,
         portals_dropped: [],
+        property_links_count: 1,
         clarification_rounds: 1,
         defaults_applied: [],
       },

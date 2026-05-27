@@ -1,10 +1,10 @@
 # Milestone 2 — Core Agent Pipeline
 
-> **Goal:** Implement the LangGraph agent graph with all 5 agent nodes (Orchestrator, Clarification, Query Builder, URL Validator, Response Formatter), Bedrock LLM integration, and MongoDB session state management. This milestone delivers the complete backend intelligence layer.
+> **Goal:** Implement the LangGraph agent graph with all 6 agent nodes (Orchestrator, Clarification, Query Builder, URL Validator, Property Scraper, Response Formatter), Bedrock LLM integration, MongoDB session state management, and individual property link extraction. This milestone delivers the complete backend intelligence layer.
 
 ---
 
-## US-06 — LangGraph State Schema & Graph Definition
+## US-2.1 — LangGraph State Schema & Graph Definition
 
 **User Story:**
 As a **backend developer**,
@@ -54,7 +54,7 @@ So that agent nodes can communicate through a shared, typed state object and the
 
 ---
 
-## US-07 — Orchestrator Agent
+## US-2.2 — Orchestrator Agent
 
 **User Story:**
 As a **property seeker**,
@@ -99,7 +99,7 @@ So that my intent (buy/rent), location, budget, and property type are correctly 
 
 ---
 
-## US-08 — Clarification Agent
+## US-2.3 — Clarification Agent
 
 **User Story:**
 As a **property seeker**,
@@ -146,7 +146,7 @@ So that I can progressively refine my search without being overwhelmed by a form
 
 ---
 
-## US-09 — Query Builder Agent
+## US-2.4 — Query Builder Agent
 
 **User Story:**
 As a **property seeker**,
@@ -190,7 +190,7 @@ So that I can click through and view matching properties without manually search
 
 ---
 
-## US-10 — URL Validator Agent
+## US-2.5 — URL Validator Agent
 
 **User Story:**
 As a **property seeker**,
@@ -239,7 +239,7 @@ So that I never encounter broken links or fabricated portal pages.
 
 ---
 
-## US-11 — Response Formatter Agent
+## US-2.6 — Response Formatter Agent
 
 **User Story:**
 As a **property seeker**,
@@ -282,7 +282,7 @@ So that I can quickly scan results and click through to the most relevant portal
 
 ---
 
-## US-12 — MongoDB Session State Manager
+## US-2.7 — MongoDB Session State Manager
 
 **User Story:**
 As a **backend developer**,
@@ -329,4 +329,313 @@ So that multi-turn conversations maintain context and the system can resume afte
 - **Verification/Testing Steps**:
   - Validated type safety using MyPy across all 25 source files with zero issues.
   - Executed all 56 backend unit and integration tests via PyTest, achieving a 100% pass rate.
+
+---
+
+## US-2.8 — Property Scraper Agent (New Node)
+
+**User Story:**
+As a **property seeker**,
+I want to see the top 5 individual property listing links from each portal's search results,
+So that I can directly visit specific properties that match my criteria without manually browsing through search pages.
+
+**Tasks:**
+- Implement `backend/agents/property_scraper.py` as a new LangGraph node
+- Given a validated portal search URL (from `validated_urls`), perform an HTTP GET request to fetch the search results HTML page
+  - Use a robust `User-Agent` header and `2xx` response validation
+  - Implement a configurable timeout (default: 5 seconds)
+- Parse the HTML response to extract individual property listing URLs:
+  - **NoBroker**: Extract links matching the pattern `/property/rent/<city>/<locality>/<property-id>` or `/property/sale/<city>/<locality>/<property-id>` from the search results DOM
+  - **99acres**: Extract links matching the pattern `/<locality>-<city>/.../<property-id>` from the search results DOM
+- Select the **top 5** property URLs per portal (ordered as they appear on the page — portal's default relevance ranking)
+- Limit total property links across all portals to a configurable maximum (default: 5 total, not per portal)
+- Store scraped property URLs in state as `scraped_property_urls: list[dict]` with structure:
+  ```json
+  {
+    "url": "https://www.nobroker.in/property/rent/bangalore/Hsr-layout/...",
+    "portal": "NoBroker",
+    "source_search_url": "https://www.nobroker.in/property/rent/bangalore/Hsr-layout?type=BHK3&rent=30000,50000"
+  }
+  ```
+- Handle edge cases gracefully:
+  - Portal returns no listings → empty array for that portal
+  - Portal blocks scraping (403/captcha) → skip with warning log, don't fail the pipeline
+  - HTML structure doesn't match expected patterns → skip with warning log
+  - Network timeout → skip with warning log
+- Add Langfuse span instrumentation (`tags: ["propgenie", "property_scraper"]`)
+- Feature must be behind a feature flag (`ENABLE_PROPERTY_SCRAPING=true`) environment variable for easy toggling
+- Write unit tests with mocked HTML responses for both NoBroker and 99acres
+
+**Acceptance Criteria:**
+- Given a valid NoBroker search URL with results, the scraper extracts up to 5 property listing URLs
+- Given a valid 99acres search URL with results, the scraper extracts up to 5 property listing URLs
+- Extracted URLs are valid absolute URLs pointing to individual property pages (not search pages, ads, or navigation links)
+- If a portal returns 0 results, the scraped list for that portal is empty (no error raised)
+- If a portal blocks the request (403/captcha/timeout), the scraper logs a warning and returns an empty list for that portal (pipeline continues)
+- Total property links across all portals are capped at the configured maximum (default: 5)
+- Langfuse span records scraping latency, number of links extracted per portal, and any errors
+- Feature is disabled when `ENABLE_PROPERTY_SCRAPING` is not set or set to `false`
+- Unit tests cover: happy path (both portals), empty results, blocked request, malformed HTML, timeout, and feature flag disabled scenarios
+
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Dependency-Free Parsing**: Used Python's built-in `html.parser.HTMLParser` to build `ALinkExtractor` for extracting all `href` attributes, keeping the production deployment lightweight and avoiding potential packaging issues.
+  - **Path-Based Filtering Rules**: Matching logic validates URL structures sequentially to differentiate search pages from listing detail pages. For NoBroker, we verify that at least 3 slash-separated segments exist after `/property/rent/` or `/property/sale/`. For 99acres, the first segment must end with one of the supported cities (e.g. `-bangalore`) and contain subsequent segments.
+  - **Concurrency & Limits**: Uses a `ThreadPoolExecutor` to fetch HTML concurrently for optimal performance. Employs `User-Agent` headers to bypass basic scraping blocks and enforces configurable request timeouts (default 5s) and capping limits (default 5 total).
+  - **Tracing & Toggling**: Fully instruments the scraper with a Langfuse span recording latency, counts, and errors, and wraps the execution inside a feature flag check (`ENABLE_PROPERTY_SCRAPING`).
+- **Key Files Created/Modified**:
+  - [state.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/models/state.py): Added `scraped_property_urls` and `validated_property_urls` to state.
+  - [property_scraper.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/property_scraper.py): Implemented the scraper node and HTML parsing/filtering logic.
+  - [test_property_scraper.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_property_scraper.py): Wrote unit tests for happy path extraction, capping, blocking, and feature flags.
+- **Verification/Testing Steps**:
+  - Run type validation: mypy pass (0 issues).
+  - Run unit test suite: pytest pass (84 tests passed successfully).
+
+---
+
+## US-2.9 — Property URL Validation
+
+**User Story:**
+As a **property seeker**,
+I want each individual property link validated before it reaches me,
+So that I never receive broken, expired, or fabricated property listing links.
+
+**Tasks:**
+- Extend `backend/agents/url_validator.py` (or add a dedicated validation step within the property scraper) to validate scraped property URLs:
+  - **Structural validation**:
+    - Domain must match the source portal's whitelist (`nobroker.in`, `99acres.com`)
+    - URL path must contain a property identifier segment (not a search page or homepage)
+    - URL must not be a duplicate of the search URL itself
+  - **Liveness validation (HTTP HEAD)**:
+    - Perform concurrent HTTP HEAD checks with 2-second timeout per URL
+    - Accept only `2xx` responses
+    - Drop URLs that return 404 (expired listings), 403 (access denied), or timeout
+- Store validated property URLs in state as `validated_property_urls: list[dict]` with structure:
+  ```json
+  {
+    "url": "https://www.nobroker.in/property/rent/bangalore/Hsr-layout/...",
+    "portal": "NoBroker",
+    "validation": { "schema_valid": true, "head_status": 200 }
+  }
+  ```
+- Track dropped property URLs in Langfuse trace metadata (similar to existing hallucination flagging for search URLs)
+- Write unit tests for property URL validation rules
+
+**Acceptance Criteria:**
+- A structurally valid individual property URL passes validation
+- A URL pointing to a search page (not an individual property) is rejected
+- A URL with a non-whitelisted domain is rejected
+- An expired listing (HTTP 404) is silently dropped
+- HTTP HEAD timeout (>2s) results in the property URL being dropped
+- `validated_property_urls` in state contains only passing property URLs
+- Dropped property URLs are tagged in Langfuse trace metadata
+- Unit tests cover each validation rule independently
+
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Grouped Constants Compliance**: Defined `URLValidatorConstants` to encapsulate whitelisted domains, minimum path segment counts, city regex mappings, budget bounds, and HEAD timeouts, aligning with the `constants_rule`.
+  - **Structural and Liveness Rules**: Property links are validated structurally (excluding duplicates of the search URL, verifying domains, checking segment counts, and ensuring city prefixes are supported) before launching concurrent HEAD checks using `ThreadPoolExecutor` with a strict 2-second timeout.
+  - **Trace Hallucination Flagging**: Integrates Langfuse trace metadata tagging to record any dropped property listing links, setting the hallucination flag and recording exact error logs for diagnostics.
+- **Key Files Created/Modified**:
+  - [url_validator.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/url_validator.py): Added structural property checking, concurrent liveness check logic, and updated trace metadata.
+  - [property_scraper.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/property_scraper.py): Cleaned up magic values using constants class and integrated validation phase.
+  - [test_property_scraper.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_property_scraper.py): Added direct unit test assertions for property link validation rules.
+- **Verification/Testing Steps**:
+  - mypy static type checking verified: 0 issues.
+  - pytest run successfully: 86 passing tests.
+
+---
+
+## US-2.10 — State Schema & Graph Topology Updates for Property Scraping
+
+**User Story:**
+As a **backend developer**,
+I want the agent state schema and LangGraph topology updated to support the property scraping pipeline,
+So that scraped property URLs flow through the graph correctly and are persisted alongside existing search data.
+
+**Tasks:**
+- Update `AgentState` in `backend/models/state.py` with new fields:
+  - `scraped_property_urls: list[dict[str, Any]]` — raw scraped property URLs
+  - `validated_property_urls: list[dict[str, Any]]` — validated individual property URLs
+- Update `get_initial_state()` to initialize both new fields as empty lists
+- Update graph topology in `backend/graph.py`:
+  - Register new node: `property_scraper`
+  - New edge flow: `url_validator` → `property_scraper` → `response_formatter` → `save_state`
+  - (Previously: `url_validator` → `response_formatter` → `save_state`)
+- Update `save_state` and `restore_state` to persist/restore `scraped_property_urls` and `validated_property_urls`
+- Update `generate_graph_sse` to yield `agent_status` for the `property_scraper` node (e.g., "Fetching top property listings...")
+- Write unit tests for the updated graph topology (verify correct node transitions including the new node)
+
+**Acceptance Criteria:**
+- `AgentState` includes `scraped_property_urls` and `validated_property_urls` fields with correct types
+- `get_initial_state()` initializes both fields as empty lists
+- Graph compiles with the new `property_scraper` node
+- Edge flow is: `url_validator` → `property_scraper` → `response_formatter` → `save_state`
+- `save_state` persists `validated_property_urls` to MongoDB
+- `restore_state` restores `validated_property_urls` from MongoDB
+- SSE stream includes an `agent_status` event for `property_scraper`
+- Existing unit tests continue to pass with schema changes
+
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **State Integration**: Formally registered `property_scraper_node` in the LangGraph state machine flow, establishing the sequential transition sequence `url_validator` -> `property_scraper` -> `response_formatter` -> `save_state`.
+  - **Database Persistence**: Updated both `create_session` and `update_session` database operations inside [session_manager.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/db/session_manager.py) to store/update the `scraped_property_urls` and `validated_property_urls` list fields under `graph_state` in the MongoDB session documents, and ensured `restore_state` recovers them.
+  - **SSE Streaming Extension**: Added SSE generator status yields for the `property_scraper` node to signal client interfaces when the listing crawler is actively running.
+- **Key Files Created/Modified**:
+  - [graph.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/graph.py): Integrated node registration, edge flows, state restoration, and SSE streaming message yields.
+  - [session_manager.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/db/session_manager.py): Added persistence and creation initialization for scraped and validated property listing URL lists.
+  - [test_graph.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_graph.py): Updated expected happy path and three-round breach execution orders to assert node calls.
+  - [test_session_manager.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_session_manager.py): Extended MongoDB mock asserts to verify proper property URL persistence.
+- **Verification/Testing Steps**:
+  - Validated type safety using MyPy, passing with zero issues across all modified files and unit tests.
+  - Executed all 86 unit and integration tests via PyTest, achieving a 100% pass rate.
+
+---
+
+## US-2.11 — Response Formatter: Property Listing Cards
+
+**User Story:**
+As a **property seeker**,
+I want individual property links displayed as clickable cards alongside the portal search link,
+So that I can see both the filtered search page and specific top matching properties at a glance.
+
+**Tasks:**
+- Update `backend/agents/response_formatter.py` to include validated property URLs in the response:
+  - Extend the `portal_card` event with a `property_links` array nested under each portal card
+  - Each property link card includes:
+    - `url`: The individual property listing URL
+    - `portal`: Portal name (NoBroker / 99acres)
+    - `rank`: Position (1–5) in the results
+    - `validation`: Schema and HEAD status
+  - Example `portal_card` with property links:
+    ```json
+    {
+      "type": "portal_card",
+      "portal": "NoBroker",
+      "priority": true,
+      "url": "https://www.nobroker.in/property/rent/bangalore/Hsr-layout?...",
+      "summary": "3BHK rentals near HSR Layout, Bangalore — ₹30K to ₹50K/mo",
+      "notes": "",
+      "validation": { "schema_valid": true, "head_status": 200 },
+      "property_links": [
+        { "url": "https://www.nobroker.in/property/rent/.../abc123", "rank": 1, "validation": { "schema_valid": true, "head_status": 200 } },
+        { "url": "https://www.nobroker.in/property/rent/.../def456", "rank": 2, "validation": { "schema_valid": true, "head_status": 200 } }
+      ]
+    }
+    ```
+- Update `search_meta` to include `property_links_count` (total validated property links returned)
+- If property scraping is disabled (feature flag off), `property_links` is an empty array (backward compatible)
+- Write unit tests for the updated formatting logic
+
+**Acceptance Criteria:**
+- `portal_card` events include a `property_links` array with validated individual property URLs
+- Each property link includes `url`, `rank`, and `validation` fields
+- Property links are ordered by their rank (page position)
+- If no property links were scraped for a portal, `property_links` is an empty array (not omitted)
+- `search_meta` includes `property_links_count` with the total count of validated property links
+- Existing portal card format is preserved (backward compatible — `property_links` is additive)
+- Unit tests validate formatting with 0, 1, and 5 property links
+
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Additive Nesting**: Extended the `portal_card` response schema by introducing a nested `property_links` array containing individual validated property URLs.
+  - **Rank Alignment**: Mapped validated property listings back to their original page order index (1-based rank) using the initial `scraped_property_urls` list and sorted ascending.
+  - **Feature Flag & Backward Compatibility**: Conditioned scraping enrichment on `ENABLE_PROPERTY_SCRAPING=true`. When disabled, `property_links` naturally returns as `[]` preserving compatibility.
+  - **Aggregate Search Metadata**: Added a cumulative `property_links_count` field inside the final `search_meta` payload reporting the total number of validated properties returned across all active cards.
+- **Key Files Created/Modified**:
+  - [response_formatter.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/response_formatter.py): Modified to rank, sort, and embed property links, and track meta count.
+  - [graph.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/graph.py): Updated the fallback `search_meta` generator in the SSE stream flow to count validated URLs.
+  - [test_response_formatter.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_response_formatter.py): Appended unit tests covering feature-disabled, empty, single-listing, and multiple-listing sorted rank cases.
+- **Verification/Testing Steps**:
+  - Validated type safety using MyPy, passing with 0 issues across all modified files.
+  - Executed all 90 tests via PyTest, achieving a 100% pass rate.
+
+---
+
+## US-2.12 — API Contract & SSE Event Updates for Property Links
+
+**User Story:**
+As a **frontend developer**,
+I want the API contract updated to document the new `property_links` field and related SSE events,
+So that I can integrate the property listing links into the chat UI correctly.
+
+**Tasks:**
+- Update `docs/hld/05-api-contract.md`:
+  - Update `portal_card` event schema to include `property_links` array
+  - Add `agent_status` event for `property_scraper` agent
+  - Update `search_meta` to include `property_links_count`
+- Update `frontend/src/types/domain.ts`:
+  - Add `PropertyLink` interface: `{ url: string; rank: number; validation: { schema_valid: boolean; head_status: number } }`
+  - Add `propertyLinks?: PropertyLink[]` to `PortalResult` interface
+  - Update `SearchMeta` to include `propertyLinksCount: number`
+- Update `frontend/src/types/sse.ts` to handle the updated `portal_card` event shape
+
+**Acceptance Criteria:**
+- HLD API contract documents the `property_links` array within `portal_card`
+- HLD API contract documents the `property_scraper` agent status event
+- Frontend TypeScript types include `PropertyLink` interface
+- `PortalResult` type includes optional `propertyLinks` array
+- `SearchMeta` type includes `propertyLinksCount`
+- SSE parser correctly deserializes `property_links` from `portal_card` events
+
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Type Completeness**: Defined the new `PropertyLink` domain interface and mapped it nested under `PortalResult` and mapped `propertyLinksCount` inside `SearchMeta` to represent crawler-enriched search metrics on the client.
+  - **SSE Schema Conformance**: Extended the `AgentStatusEvent` to allow `'property_scraper'`, defined `PropertyLinkEvent`, and added `property_links` to `PortalCardEvent` and `property_links_count` to `SearchMetaEvent` in the type definition systems to maintain strong typing boundaries.
+  - **API Contract Alignment**: Updated [05-api-contract.md](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/docs/hld/05-api-contract.md) to document the properties and status payloads for `property_scraper`, `property_links` list, and `property_links_count` aggregates.
+- **Key Files Created/Modified**:
+  - [05-api-contract.md](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/docs/hld/05-api-contract.md): Updated with `property_scraper`, `property_links` schema, and count keys.
+  - [domain.ts](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/types/domain.ts): Added `PropertyLink` interface and updated `PortalResult` and `SearchMeta` schemas.
+  - [sse.ts](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/types/sse.ts): Updated SSE event typing payloads.
+  - [AgentStatus.tsx](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/components/molecules/AgentStatus/AgentStatus.tsx): Added `property_scraper` to `AgentPhase` union types and mapped label.
+  - [page.tsx](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/app/page.tsx): Mapped snake_case properties to camelCase properties in the SSE listener.
+  - [sse.test.ts](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/lib/sse.test.ts): Extended unit tests to cover parsing events with property listing lists and counts.
+- **Verification/Testing Steps**:
+  - Run frontend compilation type verification: `npx tsc --noEmit` passed with 0 compilation issues.
+  - Executed all 45 frontend Jest tests: passed 100%.
+  - Checked all 90 backend pytest tests: passed 100%.
+
+---
+
+## US-2.13 — Frontend: Property Links UI
+
+**User Story:**
+As a **property seeker**,
+I want individual property links displayed as a ranked list below each portal search card,
+So that I can quickly click through to the most relevant individual properties.
+
+**Tasks:**
+- Create a new `PropertyLinkList` component (or extend `PortalCard`):
+  - Display up to 5 property links as a compact, numbered list under the portal search card
+  - Each link shows:
+    - Rank number (1–5)
+    - Shortened URL or "View Property #N on NoBroker" label
+    - Opens in new tab on click
+  - Subtle visual hierarchy: search link is primary (prominent), property links are secondary (smaller, indented)
+- Handle edge cases:
+  - 0 property links → don't render the list section (only show the search link as before)
+  - Loading state → show skeleton/shimmer while `property_scraper` agent is active
+- Write Storybook stories for the new component (0, 1, 3, 5 property links)
+- Write unit/component tests
+
+**Acceptance Criteria:**
+- Property links are rendered as a numbered list below the portal search card
+- Each property link opens in a new tab
+- If 0 property links exist, the UI is identical to the current behavior (no empty section)
+- Loading state shows appropriate shimmer during the scraping phase
+- Responsive layout works on mobile and desktop viewports
+- Storybook stories cover all edge cases (0, 1, 3, 5 links)
+- Visual hierarchy clearly distinguishes the search link (primary) from property links (secondary)
+
+**Status:** Not Started
 

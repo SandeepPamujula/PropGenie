@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 
 from db.connection import get_database
+from utils.constants import RateLimitConfig
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ def get_next_ist_midnight_string() -> str:
 
 def check_rate_limit(ip: str) -> None:
     """
-    Checks if the given IP has exceeded the daily rate limit (10 searches/day).
+    Checks if the given IP has exceeded the daily rate limit.
     Fails open if MongoDB connection fails.
     Raises RateLimitExceededException if limit is exceeded.
     """
@@ -34,8 +35,8 @@ def check_rate_limit(ip: str) -> None:
         db = get_database()
         rate_limit_doc = db.rate_limits.find_one({"ip": ip, "date": today_ist})
         
-        if rate_limit_doc and rate_limit_doc.get("count", 0) >= 10:
-            logger.warning(f"[RATE_LIMIT_EXCEEDED] IP {ip} exceeded daily limit of 10.")
+        if rate_limit_doc and rate_limit_doc.get("count", 0) >= RateLimitConfig.MAX_DAILY_SEARCHES:
+            logger.warning(f"[RATE_LIMIT_EXCEEDED] IP {ip} exceeded daily limit of {RateLimitConfig.MAX_DAILY_SEARCHES}.")
             raise RateLimitExceededException(f"Rate limit exceeded for IP {ip}")
             
     except RateLimitExceededException:

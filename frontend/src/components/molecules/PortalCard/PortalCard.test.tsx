@@ -78,4 +78,54 @@ describe('PortalCard', () => {
     expect(screen.queryByText('Best for Rent')).not.toBeInTheDocument()
     expect(screen.queryByText('Priority Choice')).not.toBeInTheDocument()
   })
+
+  it('renders property links when present in card details', () => {
+    const cardWithLinks: PortalResult = {
+      ...mockCardRent,
+      propertyLinks: [
+        {
+          url: 'https://nobroker.in/prop-1',
+          portal: 'NoBroker',
+          rank: 1,
+          validation: { schema_valid: true, head_status: 200 },
+        },
+        {
+          url: 'https://nobroker.in/prop-2',
+          portal: 'NoBroker',
+          rank: 2,
+          validation: { schema_valid: true, head_status: 200 },
+        },
+      ],
+    }
+
+    render(<PortalCard card={cardWithLinks} />)
+
+    // Check header
+    expect(screen.getByText('Top Listings Found')).toBeInTheDocument()
+
+    // Check individual link 1
+    const link1 = screen.getByRole('link', { name: /View Property #1 on NoBroker/i })
+    expect(link1).toBeInTheDocument()
+    expect(link1).toHaveAttribute('href', 'https://nobroker.in/prop-1')
+    expect(link1).toHaveAttribute('target', '_blank')
+    expect(link1).toHaveAttribute('rel', 'noopener noreferrer')
+
+    // Check individual link 2
+    const link2 = screen.getByRole('link', { name: /View Property #2 on NoBroker/i })
+    expect(link2).toBeInTheDocument()
+    expect(link2).toHaveAttribute('href', 'https://nobroker.in/prop-2')
+    expect(link2).toHaveAttribute('target', '_blank')
+    expect(link2).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('does not render property links section when empty or undefined', () => {
+    const cardWithoutLinks: PortalResult = {
+      ...mockCardRent,
+      propertyLinks: [],
+    }
+
+    render(<PortalCard card={cardWithoutLinks} />)
+
+    expect(screen.queryByText('Top Listings Found')).not.toBeInTheDocument()
+  })
 })

@@ -21,8 +21,12 @@ You must return a strictly valid JSON object with keys "nobroker" and "99acres".
 
 Resolution rules:
 1. "nobroker":
-   - This should be the capitalized, URL-friendly locality name (e.g., "Indiranagar", "HSR-Layout", "Whitefield", "Bandra", "Worli", "Connaught-Place", "Dwarka", "Gachibowli", "Salt-Lake").
-   - Do NOT include the city name here unless it's part of the locality name.
+   - This must be a JSON object containing:
+     - "locality": the capitalized, URL-friendly locality name (e.g., "Indiranagar", "HSR-Layout", "Whitefield", "Bandra", "Worli", "Connaught-Place", "Dwarka", "Gachibowli", "Salt-Lake"). Do NOT include the city name here unless it's part of the locality name.
+     - "placeName": a human-readable display name for the locality (e.g., "Indiranagar", "HSR Layout", "Whitefield", "Bandra West", "Worli", "Connaught Place", "Dwarka", "Gachibowli", "Salt Lake City").
+     - "lat": approximate latitude decimal coordinate (e.g. 12.9783692)
+     - "lon": approximate longitude decimal coordinate (e.g. 77.6408356)
+     - "placeId": Google Maps Place ID for this locality/landmark. If you know the exact Google Place ID (e.g., "ChIJkQN3GKQWrjsRNhBQJrhGD7U" for Indiranagar), return it. Otherwise, output a plausible unique Google place ID format (e.g., starting with "ChIJ" followed by 23 alphanumeric characters).
    - If no specific locality is specified or it cannot be resolved, return null.
 
 2. "99acres":
@@ -31,15 +35,11 @@ Resolution rules:
 
 Examples:
 - City: "Bangalore", Location Anchor: "NPS Indiranagar"
-  Output: {{"nobroker": "Indiranagar", "99acres": "indiranagar-bangalore"}}
+  Output: {{"nobroker": {{"locality": "Indiranagar", "placeName": "Indiranagar", "lat": 12.9783692, "lon": 77.6408356, "placeId": "ChIJkQN3GKQWrjsRNhBQJrhGD7U"}}, "99acres": "indiranagar-bangalore"}}
 - City: "Bangalore", Location Anchor: "HSR Layout"
-  Output: {{"nobroker": "HSR-Layout", "99acres": "hsr-layout-bangalore"}}
+  Output: {{"nobroker": {{"locality": "HSR-Layout", "placeName": "HSR Layout", "lat": 12.9141, "lon": 77.6413, "placeId": "ChIJ5_q2v0sUrjsR5Lz3mZt3P1Y"}}, "99acres": "hsr-layout-bangalore"}}
 - City: "Mumbai", Location Anchor: "Juhu Beach"
-  Output: {{"nobroker": "Juhu", "99acres": "juhu-mumbai"}}
-- City: "Delhi", Location Anchor: "Connaught Place"
-  Output: {{"nobroker": "Connaught-Place", "99acres": "connaught-place-delhi"}}
-- City: "Pune", Location Anchor: "Koregaon Park"
-  Output: {{"nobroker": "Koregaon-Park", "99acres": "koregaon-park-pune"}}
+  Output: {{"nobroker": {{"locality": "Juhu", "placeName": "Juhu", "lat": 19.1075, "lon": 72.8263, "placeId": "ChIJ2e2-v3sUrjsR6Lz3mZt3P2A"}}, "99acres": "juhu-mumbai"}}
 
 Input:
 - City: "{city}"
@@ -214,7 +214,9 @@ def query_builder_node(state: AgentState) -> dict[str, Any]:
         
         # BHK
         bhk_val = state.get("bhk")
-        if bhk_val is not None:
+        property_type = state.get("property_type")
+        property_type_lower = property_type.lower() if property_type else None
+        if bhk_val is not None and not (portal_id == "nobroker" and property_type_lower == "plot"):
             filters["bhk"] = [str(bhk_val)]
             
         # Price/Budget normalization per portal
@@ -226,21 +228,51 @@ def query_builder_node(state: AgentState) -> dict[str, Any]:
             else:
                 budget_max_val = 500000  # 5 Lakhs
                 
+        resolved_loc = resolved_localities.get(portal_id)
+        resolved_loc_str = None
+        if resolved_loc:
+            if isinstance(resolved_loc, dict):
+                resolved_loc_str = resolved_loc.get("locality")
+            else:
+                resolved_loc_str = str(resolved_loc)
+                
         if portal_id == "nobroker":
             filters["price_range"] = [budget_min, budget_max_val]
+            filters["city_name"] = city_lower
+            if isinstance(resolved_loc, dict):
+                locality = resolved_loc.get("locality")
+                lat = resolved_loc.get("lat")
+                lon = resolved_loc.get("lon")
+                place_id = resolved_loc.get("placeId")
+                place_name = resolved_loc.get("placeName") or locality
+                
+                if locality:
+                    filters["locality_name"] = locality
+                if lat is not None and lon is not None:
+                    import base64
+                    param_obj = [{
+                        "lat": float(lat),
+                        "lon": float(lon),
+                        "placeId": place_id or "ChIJdummyLocationID12345678",
+                        "placeName": place_name or "Location"
+                    }]
+                    json_str = json.dumps(param_obj, separators=(',', ':'))
+                    search_param_b64 = base64.b64encode(json_str.encode('utf-8')).decode('utf-8')
+                    filters["search_param"] = search_param_b64
+                    filters["radius"] = float(radius_km)
+            elif resolved_loc_str:
+                filters["locality_name"] = resolved_loc_str
         elif portal_id == "99acres":
             filters["price_min"] = budget_min
             if budget_max is not None:
                 filters["price_max"] = budget_max
                 
         # Property type support and mapping
-        property_type = state.get("property_type")
-        if property_type:
-            property_type_lower = property_type.lower()
+        if property_type_lower:
             if portal_id == "nobroker":
-                # NoBroker does not support plots
-                if property_type_lower == "plot":
-                    print("[Query Builder Agent] Skipping NoBroker - 'plot' property type not supported.")
+                # NoBroker does not support plots for rent (only buy flow)
+                if property_type_lower == "plot" and flow != "buy":
+                    print("[Query Builder Agent] Skipping NoBroker - 'plot' property type not supported for rent.")
                     continue
                     
                 # Map standard property_type to building_type
@@ -256,11 +288,15 @@ def query_builder_node(state: AgentState) -> dict[str, Any]:
                     filters["building_type"] = building_type
                     
         # Construct parameterized URL
-        resolved_loc = resolved_localities.get(portal_id)
-        
+        original_buy_template = None
+        is_plot_buy = (portal_id == "nobroker" and flow == "buy" and property_type_lower == "plot")
+        if is_plot_buy:
+            original_buy_template = portal_config.buy_url_template
+            portal_config.buy_url_template = "{base_url}/property/plot/{city_slug}/{city_capitalized}"
+
         try:
-            if resolved_loc:
-                resolved_loc_lower = resolved_loc.lower()
+            if resolved_loc_str:
+                resolved_loc_lower = resolved_loc_str.lower()
                 if portal_id == "nobroker":
                     # Temporarily add resolved locality to city slug map to capitalise in path segment
                     portal_config.city_slug_map[resolved_loc_lower] = city_slug
@@ -279,9 +315,11 @@ def query_builder_node(state: AgentState) -> dict[str, Any]:
             print(f"[Query Builder Agent] Error building URL for portal '{portal_id}': {e}")
             
         finally:
+            if is_plot_buy and original_buy_template is not None:
+                portal_config.buy_url_template = original_buy_template
             # Clean up temporary keys in city_slug_map
-            if resolved_loc:
-                resolved_loc_lower = resolved_loc.lower()
+            if resolved_loc_str:
+                resolved_loc_lower = resolved_loc_str.lower()
                 if resolved_loc_lower in portal_config.city_slug_map:
                     if resolved_loc_lower not in ["bangalore", "mumbai", "pune", "chennai", "hyderabad", "delhi"]:
                         del portal_config.city_slug_map[resolved_loc_lower]

@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from graph import generate_graph_sse
 from pydantic import BaseModel
 from utils.rate_limiter import check_rate_limit, RateLimitExceededException, get_next_ist_midnight_string
+from utils.constants import RateLimitConfig
 
 app = FastAPI(title="PropGenie Backend Service", version="1.0.0")
 
@@ -90,7 +91,7 @@ async def chat(
             status_code=429,
             content={
                 "error": "rate_limit_exceeded",
-                "message": "You've reached your daily search limit of 10. Please try again tomorrow!",
+                "message": f"You've reached your daily search limit of {RateLimitConfig.MAX_DAILY_SEARCHES}. Please try again tomorrow!",
                 "reset_at": get_next_ist_midnight_string()
             }
         )

@@ -21,16 +21,18 @@ def test_graph_happy_path() -> None:
     assert "orchestrator" in nodes_executed
     assert "query_builder" in nodes_executed
     assert "url_validator" in nodes_executed
+    assert "property_scraper" in nodes_executed
     assert "response_formatter" in nodes_executed
     assert "save_state" in nodes_executed
     assert "clarification" not in nodes_executed
 
-    # Verify linear sequence: restore_state -> orchestrator -> query_builder -> url_validator -> response_formatter -> save_state
+    # Verify linear sequence: restore_state -> orchestrator -> query_builder -> url_validator -> property_scraper -> response_formatter -> save_state
     expected_order = [
         "restore_state",
         "orchestrator",
         "query_builder",
         "url_validator",
+        "property_scraper",
         "response_formatter",
         "save_state",
     ]
@@ -81,6 +83,7 @@ def test_graph_three_round_breach_path() -> None:
     assert "orchestrator" in nodes_executed
     assert "query_builder" in nodes_executed
     assert "url_validator" in nodes_executed
+    assert "property_scraper" in nodes_executed
     assert "response_formatter" in nodes_executed
     assert "save_state" in nodes_executed
     assert "clarification" not in nodes_executed
@@ -90,6 +93,7 @@ def test_graph_three_round_breach_path() -> None:
         "orchestrator",
         "query_builder",
         "url_validator",
+        "property_scraper",
         "response_formatter",
         "save_state",
     ]

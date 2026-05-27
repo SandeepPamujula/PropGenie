@@ -46,7 +46,7 @@ export default function Home(): ReactElement {
       id: 'welcome',
       role: 'assistant',
       content:
-        'Namaste! I am PropGenie, your AI property search assistant. I can help you search for properties to buy or rent across top Indian portals like NoBroker and 99acres.\n\nWhat kind of property are you looking for today? (e.g., "3 BHK for rent in HSR Layout, Bangalore under 50k")',
+        'Namaste! I am PropGenie, your AI property search assistant. I can help you search for properties to buy or rent across top Indian portals like NoBroker and 99acres.\n\nWhat kind of property are you looking for today? (e.g., "3 BHK for rent in HSR Layout, Bangalore beween 30k to 50k")',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: 'text',
     },
@@ -109,6 +109,7 @@ export default function Home(): ReactElement {
               url: data.url,
               isPriority,
               ...(data.notes !== undefined ? { notes: data.notes } : {}),
+              propertyLinks: data.property_links || [],
             }
             portalResults = [...portalResults, card]
 
@@ -141,6 +142,7 @@ export default function Home(): ReactElement {
               portalsSearched: data.portals_searched,
               portalsReturned: data.portals_returned,
               portalsDropped: data.portals_dropped || [],
+              propertyLinksCount: data.property_links_count || 0,
               clarificationRounds: data.clarification_rounds || 0,
               defaultsApplied: data.defaults_applied || [],
             }

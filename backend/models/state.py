@@ -23,6 +23,8 @@ class AgentState(TypedDict):
     messages: list[dict[str, Any]]
     generated_urls: list[str]
     validated_urls: list[dict[str, Any]]
+    scraped_property_urls: list[dict[str, Any]]
+    validated_property_urls: list[dict[str, Any]]
     search_meta: Optional[dict[str, Any]]
     error: Optional[str]
     proceed_with_defaults: Optional[bool]
@@ -54,6 +56,8 @@ def get_initial_state(session_id: str, ip: str) -> AgentState:
         "messages": [],
         "generated_urls": [],
         "validated_urls": [],
+        "scraped_property_urls": [],
+        "validated_property_urls": [],
         "search_meta": None,
         "error": None,
         "proceed_with_defaults": None,

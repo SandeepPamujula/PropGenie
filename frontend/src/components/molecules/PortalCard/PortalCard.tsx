@@ -1,78 +1,18 @@
 import type { ReactElement } from 'react'
 import type { PortalResult } from '../../../types/domain'
+import { PORTAL_CONFIG, PRIORITY_LABELS } from '../../../lib/constants'
 
 export interface PortalCardProps {
   card: PortalResult
 }
 
 export function PortalCard({ card }: PortalCardProps): ReactElement {
-  const { portal, label, summary, url, isPriority, notes } = card
+  const { portal, label, summary, url, isPriority, notes, propertyLinks } = card
 
   // Determine brand colors and labels dynamically
   const getPortalDetails = (portalName: string) => {
-    const nameLower = portalName.toLowerCase()
-    switch (nameLower) {
-      case 'nobroker':
-        return {
-          displayName: 'NoBroker',
-          dotColor: 'bg-[var(--color-portal-nobroker-green)]',
-          textColor: 'text-[var(--color-portal-nobroker-green)]',
-          badgeBg: 'bg-[var(--color-portal-nobroker-green)]/10 dark:bg-[var(--color-portal-nobroker-green)]/20',
-          badgeBorder: 'border-[var(--color-portal-nobroker-green)]/30',
-          ctaBg: 'bg-[var(--color-portal-nobroker-green)] hover:bg-[var(--color-portal-nobroker-green)]/90 shadow-[0_0_12px_rgba(16,185,129,0.2)]',
-          focusRing: 'focus:ring-[var(--color-portal-nobroker-green)]',
-        }
-      case '99acres':
-        return {
-          displayName: '99acres',
-          dotColor: 'bg-[var(--color-portal-acres-blue)]',
-          textColor: 'text-[var(--color-portal-acres-blue)]',
-          badgeBg: 'bg-[var(--color-portal-acres-blue)]/10 dark:bg-[var(--color-portal-acres-blue)]/20',
-          badgeBorder: 'border-[var(--color-portal-acres-blue)]/30',
-          ctaBg: 'bg-[var(--color-portal-acres-blue)] hover:bg-[var(--color-portal-acres-blue)]/90 shadow-[0_0_12px_rgba(2,132,199,0.2)]',
-          focusRing: 'focus:ring-[var(--color-portal-acres-blue)]',
-        }
-      case 'magicbricks':
-        return {
-          displayName: 'MagicBricks',
-          dotColor: 'bg-[var(--color-portal-magicbricks)]',
-          textColor: 'text-[var(--color-portal-magicbricks)]',
-          badgeBg: 'bg-[var(--color-portal-magicbricks)]/10 dark:bg-[var(--color-portal-magicbricks)]/20',
-          badgeBorder: 'border-[var(--color-portal-magicbricks)]/30',
-          ctaBg: 'bg-[var(--color-portal-magicbricks)] hover:bg-[var(--color-portal-magicbricks)]/90 shadow-[0_0_12px_rgba(42,157,143,0.2)]',
-          focusRing: 'focus:ring-[var(--color-portal-magicbricks)]',
-        }
-      case 'housing':
-        return {
-          displayName: 'Housing.com',
-          dotColor: 'bg-[var(--color-portal-housing)]',
-          textColor: 'text-[var(--color-portal-housing)]',
-          badgeBg: 'bg-[var(--color-portal-housing)]/10 dark:bg-[var(--color-portal-housing)]/20',
-          badgeBorder: 'border-[var(--color-portal-housing)]/30',
-          ctaBg: 'bg-[var(--color-portal-housing)] hover:bg-[var(--color-portal-housing)]/90 shadow-[0_0_12px_rgba(69,123,157,0.2)]',
-          focusRing: 'focus:ring-[var(--color-portal-housing)]',
-        }
-      case 'squareyards':
-        return {
-          displayName: 'Square Yards',
-          dotColor: 'bg-[var(--color-portal-squareyards)]',
-          textColor: 'text-[var(--color-portal-squareyards)]',
-          badgeBg: 'bg-[var(--color-portal-squareyards)]/10 dark:bg-[var(--color-portal-squareyards)]/20',
-          badgeBorder: 'border-[var(--color-portal-squareyards)]/30',
-          ctaBg: 'bg-[var(--color-portal-squareyards)] hover:bg-[var(--color-portal-squareyards)]/90 shadow-[0_0_12px_rgba(106,76,147,0.2)]',
-          focusRing: 'focus:ring-[var(--color-portal-squareyards)]',
-        }
-      default:
-        return {
-          displayName: portalName.charAt(0).toUpperCase() + portalName.slice(1),
-          dotColor: 'bg-zinc-400',
-          textColor: 'text-zinc-600 dark:text-zinc-400',
-          badgeBg: 'bg-zinc-100 dark:bg-zinc-800',
-          badgeBorder: 'border-zinc-200 dark:border-zinc-700',
-          ctaBg: 'bg-zinc-700 hover:bg-zinc-800 focus:ring-zinc-500',
-          focusRing: 'focus:ring-zinc-500',
-        }
-    }
+    const nameLower = portalName.toLowerCase() as keyof typeof PORTAL_CONFIG
+    return PORTAL_CONFIG[nameLower] || PORTAL_CONFIG.default
   }
 
   const details = getPortalDetails(portal)
@@ -80,9 +20,7 @@ export function PortalCard({ card }: PortalCardProps): ReactElement {
   // Priority Badge Custom Label
   const getPriorityLabel = (portalName: string) => {
     const nameLower = portalName.toLowerCase()
-    if (nameLower === 'nobroker') return 'Best for Rent'
-    if (nameLower === '99acres') return 'Best for Buy'
-    return 'Priority Choice'
+    return PRIORITY_LABELS[nameLower] || PRIORITY_LABELS.default
   }
 
   return (
@@ -156,6 +94,40 @@ export function PortalCard({ card }: PortalCardProps): ReactElement {
             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
         </a>
+
+        {/* Property Links Section */}
+        {propertyLinks && propertyLinks.length > 0 && (
+          <div
+            id={`property-links-${portal.toLowerCase()}`}
+            className="mt-3.5 pt-3 border-t border-dashed border-zinc-200 dark:border-zinc-800/60 flex flex-col gap-2"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block mb-1">
+              Top Listings Found
+            </span>
+            <div className="flex flex-col gap-2">
+              {propertyLinks.map((link) => (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  id={`property-link-${portal.toLowerCase()}-${link.rank}`}
+                  className="flex items-center gap-2 group/link text-xs text-zinc-600 hover:text-brand-500 dark:text-zinc-400 dark:hover:text-brand-400 transition-colors duration-150"
+                >
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 group-hover/link:bg-brand-500 group-hover/link:text-white transition-colors duration-150">
+                    {link.rank}
+                  </span>
+                  <span className="truncate flex-1 hover:underline">
+                    View Property #{link.rank} on {details.displayName}
+                  </span>
+                  <svg className="h-3 w-3 shrink-0 opacity-0 group-hover/link:opacity-100 transition-opacity duration-150" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                  </svg>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,7 +1,9 @@
 import json
+import os
 from typing import Any
 from observability.langfuse_tracer import create_span, end_span
 from models.state import AgentState
+from utils.constants import PropertyScraperConstants
 
 def format_currency(value: int) -> str:
     """Formats an integer into Indian currency format (e.g. 1.5Cr, 25K)."""
@@ -83,8 +85,13 @@ def response_formatter_node(state: AgentState) -> dict[str, Any]:
     validated_urls = state.get("validated_urls", [])
     formatted_urls = []
     
+    scraped_props = state.get("scraped_property_urls", []) or []
+    validated_props = state.get("validated_property_urls", []) or []
+    enable_scraping = os.environ.get(PropertyScraperConstants.ENV_ENABLE_SCRAPING, "false").lower() == "true"
+    
     for card in validated_urls:
         portal = card.get("portal", "")
+        card_url = card.get("url")
         
         # Priority: NoBroker prioritized for rentals, 99acres for purchases
         priority = False
@@ -93,14 +100,30 @@ def response_formatter_node(state: AgentState) -> dict[str, Any]:
         elif intent == "buy" and portal.lower() == "99acres":
             priority = True
             
+        property_links = []
+        if enable_scraping:
+            # Match property links for this portal card
+            scraped_for_card = [s for s in scraped_props if s.get("source_search_url") == card_url]
+            url_to_rank = {s["url"]: idx + 1 for idx, s in enumerate(scraped_for_card)}
+            validated_for_card = [v for v in validated_props if v.get("source_search_url") == card_url]
+            for val_prop in validated_for_card:
+                property_links.append({
+                    "url": val_prop["url"],
+                    "portal": val_prop["portal"],
+                    "rank": url_to_rank.get(val_prop["url"], 99),
+                    "validation": val_prop["validation"]
+                })
+            property_links.sort(key=lambda x: x["rank"])
+            
         formatted_card = {
             "type": "portal_card",
             "portal": portal,
             "priority": priority,
-            "url": card.get("url"),
+            "url": card_url,
             "summary": summary,
             "notes": notes,
-            "validation": card.get("validation", {})
+            "validation": card.get("validation", {}),
+            "property_links": property_links
         }
         formatted_urls.append(formatted_card)
         
@@ -114,14 +137,32 @@ def response_formatter_node(state: AgentState) -> dict[str, Any]:
     if budget_min == 0:
         defaults_applied.append("budget_min: 0")
         
+    property_links_count = sum(len(c["property_links"]) for c in formatted_urls)
+    
     search_meta = {
         "type": "search_meta",
         "portals_searched": len(generated),
         "portals_returned": len(formatted_urls),
         "portals_dropped": dropped,
+        "property_links_count": property_links_count,
         "clarification_rounds": state.get("clarification_round", 0),
         "defaults_applied": defaults_applied
     }
+
+    # Append assistant's final response to messages list to maintain conversation structure
+    from datetime import datetime, timezone
+    messages = list(state.get("messages", []))
+    if formatted_urls:
+        assistant_content = f"Here are the listings I found matching your criteria: {summary}"
+    else:
+        assistant_content = "I could not find any matching listings on the search portals."
+        
+    if not any(m.get("role") == "assistant" and m.get("content") == assistant_content for m in messages):
+        messages.append({
+            "role": "assistant",
+            "content": assistant_content,
+            "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        })
 
     print(f"[Response Formatter Agent] Completed. Formatted {len(formatted_urls)} URLs.")
     
@@ -136,5 +177,7 @@ def response_formatter_node(state: AgentState) -> dict[str, Any]:
     return {
         "validated_urls": formatted_urls,
         "search_meta": search_meta,
-        "search_completed": True
+        "search_completed": True,
+        "messages": messages
     }
+

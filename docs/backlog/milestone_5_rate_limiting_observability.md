@@ -4,7 +4,7 @@
 
 ---
 
-## US-24 — Rate Limit Logic in Agent Handler
+## US-5.1 — Rate Limit Logic in Agent Handler
 
 **User Story:**
 As a **platform operator**,
@@ -32,7 +32,7 @@ So that individual IPs are limited to 10 searches per day and the system is prot
 
 ---
 
-## US-25 — Rate Limit Counter Increment
+## US-5.2 — Rate Limit Counter Increment
 
 **User Story:**
 As a **platform operator**,
@@ -58,7 +58,7 @@ So that rate limiting accurately reflects actual search usage.
 
 ---
 
-## US-26 — Search Analytics Logging
+## US-5.3 — Search Analytics Logging
 
 **User Story:**
 As a **product analyst**,
@@ -97,7 +97,7 @@ So that I can analyze search patterns, popular cities, and portal performance ov
 
 ---
 
-## US-27 — Langfuse LLM Tracing
+## US-5.4 — Langfuse LLM Tracing
 
 **User Story:**
 As a **platform operator**,
@@ -132,7 +132,7 @@ So that I can monitor LLM performance, detect hallucinations, and track costs.
 
 ---
 
-## US-28 — CloudWatch Custom Metrics
+## US-5.5 — CloudWatch Custom Metrics
 
 **User Story:**
 As a **platform operator**,

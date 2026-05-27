@@ -5,6 +5,7 @@ export type AgentPhase =
   | 'clarification'
   | 'query_builder'
   | 'url_validator'
+  | 'property_scraper'
   | 'response_formatter'
   | 'complete'
 
@@ -29,6 +30,8 @@ export function AgentStatus({
         return 'Query Builder'
       case 'url_validator':
         return 'URL Validator'
+      case 'property_scraper':
+        return 'Property Scraper'
       case 'response_formatter':
         return 'Formatter'
       case 'complete':

@@ -2,7 +2,7 @@ import type { Portal } from './domain'
 
 export interface AgentStatusEvent {
   type: 'agent_status'
-  agent: 'orchestrator' | 'clarification' | 'query_builder' | 'url_validator' | 'response_formatter'
+  agent: 'orchestrator' | 'clarification' | 'query_builder' | 'url_validator' | 'property_scraper' | 'response_formatter'
   message: string
   timestamp: string
 }
@@ -16,6 +16,16 @@ export interface ClarificationEvent {
   missing_fields: string[]
 }
 
+export interface PropertyLinkEvent {
+  url: string
+  portal: string
+  rank: number
+  validation: {
+    schema_valid: boolean
+    head_status: number
+  }
+}
+
 export interface PortalCardEvent {
   portal: Portal
   label?: string
@@ -24,6 +34,7 @@ export interface PortalCardEvent {
   isPriority?: boolean
   priority?: boolean
   notes?: string
+  property_links?: PropertyLinkEvent[]
 }
 
 export interface SearchMetaEvent {
@@ -31,6 +42,7 @@ export interface SearchMetaEvent {
   portals_searched: number
   portals_returned: number
   portals_dropped: string[]
+  property_links_count?: number
   clarification_rounds: number
   defaults_applied: string[]
 }

@@ -46,6 +46,8 @@ def test_session_lifecycle() -> None:
     assert doc["ip"] == ip
     assert doc["context"]["intent"] is None
     assert doc["graph_state"]["pending_fields"] == []
+    assert doc["graph_state"]["scraped_property_urls"] == []
+    assert doc["graph_state"]["validated_property_urls"] == []
     assert doc["clarification_round"] == 0
     assert "last_active" in doc
     assert "created_at" in doc
@@ -67,6 +69,8 @@ def test_session_lifecycle() -> None:
     state["pending_fields"] = ["bhk"]
     state["clarification_round"] = 1
     state["messages"] = [{"role": "user", "content": "hi", "ts": "2026-05-19T18:00:00Z"}]
+    state["scraped_property_urls"] = [{"url": "http://nobroker.in/prop1", "portal": "NoBroker"}]
+    state["validated_property_urls"] = [{"url": "http://nobroker.in/prop1", "portal": "NoBroker", "rank": 1}]
 
     updated = update_session(session_id, state)
     assert updated is not None
@@ -74,6 +78,8 @@ def test_session_lifecycle() -> None:
     assert updated["context"]["city"] == "Bangalore"
     assert updated["context"]["location_anchor"] == "Indiranagar"
     assert updated["graph_state"]["pending_fields"] == ["bhk"]
+    assert updated["graph_state"]["scraped_property_urls"] == [{"url": "http://nobroker.in/prop1", "portal": "NoBroker"}]
+    assert updated["graph_state"]["validated_property_urls"] == [{"url": "http://nobroker.in/prop1", "portal": "NoBroker", "rank": 1}]
     assert updated["clarification_round"] == 1
     assert len(updated["messages"]) == 1
     assert updated["messages"][0]["content"] == "hi"
@@ -124,6 +130,8 @@ def test_restore_state_node_existing_session() -> None:
     existing_state = get_initial_state(session_id, ip)
     existing_state["intent"] = "Rent"
     existing_state["messages"].append({"role": "user", "content": "hi", "ts": "2026-05-19T19:00:00Z"})
+    existing_state["scraped_property_urls"] = [{"url": "http://nobroker.in/prop1", "portal": "NoBroker"}]
+    existing_state["validated_property_urls"] = [{"url": "http://nobroker.in/prop1", "portal": "NoBroker", "rank": 1}]
     update_session(session_id, existing_state)
 
     # 2. Incoming state representing a new turn
@@ -132,6 +140,8 @@ def test_restore_state_node_existing_session() -> None:
 
     restored = restore_state(incoming_state)
     assert restored["intent"] == "Rent"
+    assert restored["scraped_property_urls"] == [{"url": "http://nobroker.in/prop1", "portal": "NoBroker"}]
+    assert restored["validated_property_urls"] == [{"url": "http://nobroker.in/prop1", "portal": "NoBroker", "rank": 1}]
     assert len(restored["messages"]) == 2
     assert restored["messages"][0]["content"] == "hi"
     assert restored["messages"][1]["content"] == "tell me more"
