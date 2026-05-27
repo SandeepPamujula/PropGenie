@@ -4,6 +4,16 @@ export type PropertyType = 'plot' | 'apartment' | 'villa' | 'house'
 
 export type Portal = 'nobroker' | '99acres' | 'magicbricks' | 'housing' | 'squareyards'
 
+export interface PropertyLink {
+  url: string
+  portal: string
+  rank: number
+  validation: {
+    schema_valid: boolean
+    head_status: number
+  }
+}
+
 export interface PortalResult {
   portal: Portal
   label: string
@@ -11,12 +21,14 @@ export interface PortalResult {
   url: string
   isPriority: boolean
   notes?: string
+  propertyLinks?: PropertyLink[]
 }
 
 export interface SearchMeta {
   portalsSearched: number
   portalsReturned: number
   portalsDropped: string[]
+  propertyLinksCount: number
   clarificationRounds: number
   defaultsApplied: string[]
 }

@@ -586,7 +586,24 @@ So that I can integrate the property listing links into the chat UI correctly.
 - `SearchMeta` type includes `propertyLinksCount`
 - SSE parser correctly deserializes `property_links` from `portal_card` events
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Type Completeness**: Defined the new `PropertyLink` domain interface and mapped it nested under `PortalResult` and mapped `propertyLinksCount` inside `SearchMeta` to represent crawler-enriched search metrics on the client.
+  - **SSE Schema Conformance**: Extended the `AgentStatusEvent` to allow `'property_scraper'`, defined `PropertyLinkEvent`, and added `property_links` to `PortalCardEvent` and `property_links_count` to `SearchMetaEvent` in the type definition systems to maintain strong typing boundaries.
+  - **API Contract Alignment**: Updated [05-api-contract.md](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/docs/hld/05-api-contract.md) to document the properties and status payloads for `property_scraper`, `property_links` list, and `property_links_count` aggregates.
+- **Key Files Created/Modified**:
+  - [05-api-contract.md](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/docs/hld/05-api-contract.md): Updated with `property_scraper`, `property_links` schema, and count keys.
+  - [domain.ts](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/types/domain.ts): Added `PropertyLink` interface and updated `PortalResult` and `SearchMeta` schemas.
+  - [sse.ts](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/types/sse.ts): Updated SSE event typing payloads.
+  - [AgentStatus.tsx](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/components/molecules/AgentStatus/AgentStatus.tsx): Added `property_scraper` to `AgentPhase` union types and mapped label.
+  - [page.tsx](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/app/page.tsx): Mapped snake_case properties to camelCase properties in the SSE listener.
+  - [sse.test.ts](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/lib/sse.test.ts): Extended unit tests to cover parsing events with property listing lists and counts.
+- **Verification/Testing Steps**:
+  - Run frontend compilation type verification: `npx tsc --noEmit` passed with 0 compilation issues.
+  - Executed all 45 frontend Jest tests: passed 100%.
+  - Checked all 90 backend pytest tests: passed 100%.
 
 ---
 

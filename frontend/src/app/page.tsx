@@ -109,6 +109,7 @@ export default function Home(): ReactElement {
               url: data.url,
               isPriority,
               ...(data.notes !== undefined ? { notes: data.notes } : {}),
+              propertyLinks: data.property_links || [],
             }
             portalResults = [...portalResults, card]
 
@@ -141,6 +142,7 @@ export default function Home(): ReactElement {
               portalsSearched: data.portals_searched,
               portalsReturned: data.portals_returned,
               portalsDropped: data.portals_dropped || [],
+              propertyLinksCount: data.property_links_count || 0,
               clarificationRounds: data.clarification_rounds || 0,
               defaultsApplied: data.defaults_applied || [],
             }

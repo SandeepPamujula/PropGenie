@@ -24,6 +24,8 @@ data: <json_payload>
 ```
 
 ### Event: `agent_status`
+Indicates current pipeline execution phase. Possible values for `agent` are `"orchestrator"`, `"clarification"`, `"query_builder"`, `"url_validator"`, `"property_scraper"`, and `"response_formatter"`.
+
 ```json
 {
   "type": "agent_status",
@@ -54,7 +56,15 @@ data: <json_payload>
   "url": "https://www.nobroker.in/property/residential/rent/bangalore/...",
   "summary": "3BHK rentals near HSR Layout, Bangalore — ₹20K to ₹30K/mo",
   "notes": "4 km radius applied around HSR Layout",
-  "validation": {"schema_valid": true, "head_status": 200}
+  "validation": {"schema_valid": true, "head_status": 200},
+  "property_links": [
+    {
+      "url": "https://www.nobroker.in/property/rent/bangalore/Hsr-layout/abc123",
+      "portal": "NoBroker",
+      "rank": 1,
+      "validation": {"schema_valid": true, "head_status": 200}
+    }
+  ]
 }
 ```
 
@@ -65,6 +75,7 @@ data: <json_payload>
   "portals_searched": 2,
   "portals_returned": 2,
   "portals_dropped": [],
+  "property_links_count": 1,
   "clarification_rounds": 0,
   "defaults_applied": ["radius_km: 4"]
 }
