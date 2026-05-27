@@ -542,7 +542,21 @@ So that I can see both the filtered search page and specific top matching proper
 - Existing portal card format is preserved (backward compatible — `property_links` is additive)
 - Unit tests validate formatting with 0, 1, and 5 property links
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Additive Nesting**: Extended the `portal_card` response schema by introducing a nested `property_links` array containing individual validated property URLs.
+  - **Rank Alignment**: Mapped validated property listings back to their original page order index (1-based rank) using the initial `scraped_property_urls` list and sorted ascending.
+  - **Feature Flag & Backward Compatibility**: Conditioned scraping enrichment on `ENABLE_PROPERTY_SCRAPING=true`. When disabled, `property_links` naturally returns as `[]` preserving compatibility.
+  - **Aggregate Search Metadata**: Added a cumulative `property_links_count` field inside the final `search_meta` payload reporting the total number of validated properties returned across all active cards.
+- **Key Files Created/Modified**:
+  - [response_formatter.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/agents/response_formatter.py): Modified to rank, sort, and embed property links, and track meta count.
+  - [graph.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/graph.py): Updated the fallback `search_meta` generator in the SSE stream flow to count validated URLs.
+  - [test_response_formatter.py](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/backend/tests/unit/test_response_formatter.py): Appended unit tests covering feature-disabled, empty, single-listing, and multiple-listing sorted rank cases.
+- **Verification/Testing Steps**:
+  - Validated type safety using MyPy, passing with 0 issues across all modified files.
+  - Executed all 90 tests via PyTest, achieving a 100% pass rate.
 
 ---
 

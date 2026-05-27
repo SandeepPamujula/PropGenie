@@ -1,4 +1,6 @@
+import os
 from typing import Any
+from unittest.mock import patch
 from agents.response_formatter import response_formatter_node, format_currency
 from models.state import get_initial_state
 
@@ -100,3 +102,105 @@ def test_response_formatter_budget_defaults() -> None:
     
     # Notes check
     assert "Budget floor assumed as ₹0" in urls[0]["notes"]
+
+
+def test_response_formatter_property_links_disabled() -> None:
+    state = get_initial_state("session-fmt-links-disabled", "127.0.0.1")
+    state["intent"] = "rent"
+    state["city"] = "Bangalore"
+    state["validated_urls"] = [
+        {"url": "https://www.nobroker.in/rent", "portal": "NoBroker"}
+    ]
+    state["scraped_property_urls"] = [
+        {"url": "https://www.nobroker.in/prop1", "portal": "NoBroker", "source_search_url": "https://www.nobroker.in/rent"}
+    ]
+    state["validated_property_urls"] = [
+        {"url": "https://www.nobroker.in/prop1", "portal": "NoBroker", "source_search_url": "https://www.nobroker.in/rent", "validation": {"schema_valid": True, "head_status": 200}}
+    ]
+
+    with patch.dict(os.environ, {"ENABLE_PROPERTY_SCRAPING": "false"}):
+        updates = response_formatter_node(state)
+        urls = updates["validated_urls"]
+        assert len(urls) == 1
+        assert urls[0]["property_links"] == []
+        assert updates["search_meta"]["property_links_count"] == 0
+
+
+def test_response_formatter_property_links_enabled_empty() -> None:
+    state = get_initial_state("session-fmt-links-empty", "127.0.0.1")
+    state["intent"] = "rent"
+    state["city"] = "Bangalore"
+    state["validated_urls"] = [
+        {"url": "https://www.nobroker.in/rent", "portal": "NoBroker"}
+    ]
+    state["scraped_property_urls"] = []
+    state["validated_property_urls"] = []
+
+    with patch.dict(os.environ, {"ENABLE_PROPERTY_SCRAPING": "true"}):
+        updates = response_formatter_node(state)
+        urls = updates["validated_urls"]
+        assert len(urls) == 1
+        assert urls[0]["property_links"] == []
+        assert updates["search_meta"]["property_links_count"] == 0
+
+
+def test_response_formatter_property_links_enabled_one() -> None:
+    state = get_initial_state("session-fmt-links-one", "127.0.0.1")
+    state["intent"] = "rent"
+    state["city"] = "Bangalore"
+    state["validated_urls"] = [
+        {"url": "https://www.nobroker.in/rent", "portal": "NoBroker"}
+    ]
+    state["scraped_property_urls"] = [
+        {"url": "https://www.nobroker.in/prop1", "portal": "NoBroker", "source_search_url": "https://www.nobroker.in/rent"}
+    ]
+    state["validated_property_urls"] = [
+        {"url": "https://www.nobroker.in/prop1", "portal": "NoBroker", "source_search_url": "https://www.nobroker.in/rent", "validation": {"schema_valid": True, "head_status": 200}}
+    ]
+
+    with patch.dict(os.environ, {"ENABLE_PROPERTY_SCRAPING": "true"}):
+        updates = response_formatter_node(state)
+        urls = updates["validated_urls"]
+        assert len(urls) == 1
+        links = urls[0]["property_links"]
+        assert len(links) == 1
+        assert links[0]["url"] == "https://www.nobroker.in/prop1"
+        assert links[0]["portal"] == "NoBroker"
+        assert links[0]["rank"] == 1
+        assert links[0]["validation"] == {"schema_valid": True, "head_status": 200}
+        assert updates["search_meta"]["property_links_count"] == 1
+
+
+def test_response_formatter_property_links_enabled_multiple_sorting() -> None:
+    state = get_initial_state("session-fmt-links-multi", "127.0.0.1")
+    state["intent"] = "rent"
+    state["city"] = "Bangalore"
+    state["validated_urls"] = [
+        {"url": "https://www.nobroker.in/rent", "portal": "NoBroker"}
+    ]
+    
+    # original scraped order: prop1 (rank 1), prop2 (rank 2), prop3 (rank 3)
+    state["scraped_property_urls"] = [
+        {"url": "https://www.nobroker.in/prop1", "portal": "NoBroker", "source_search_url": "https://www.nobroker.in/rent"},
+        {"url": "https://www.nobroker.in/prop2", "portal": "NoBroker", "source_search_url": "https://www.nobroker.in/rent"},
+        {"url": "https://www.nobroker.in/prop3", "portal": "NoBroker", "source_search_url": "https://www.nobroker.in/rent"}
+    ]
+    
+    # validated list in arbitrary order (e.g. concurrent completion order)
+    state["validated_property_urls"] = [
+        {"url": "https://www.nobroker.in/prop3", "portal": "NoBroker", "source_search_url": "https://www.nobroker.in/rent", "validation": {"schema_valid": True, "head_status": 200}},
+        {"url": "https://www.nobroker.in/prop1", "portal": "NoBroker", "source_search_url": "https://www.nobroker.in/rent", "validation": {"schema_valid": True, "head_status": 200}}
+    ]
+
+    with patch.dict(os.environ, {"ENABLE_PROPERTY_SCRAPING": "true"}):
+        updates = response_formatter_node(state)
+        urls = updates["validated_urls"]
+        assert len(urls) == 1
+        links = urls[0]["property_links"]
+        assert len(links) == 2
+        # Verify links are sorted by rank ascending (prop1 first, then prop3)
+        assert links[0]["url"] == "https://www.nobroker.in/prop1"
+        assert links[0]["rank"] == 1
+        assert links[1]["url"] == "https://www.nobroker.in/prop3"
+        assert links[1]["rank"] == 3
+        assert updates["search_meta"]["property_links_count"] == 2

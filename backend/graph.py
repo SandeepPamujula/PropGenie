@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timezone
 from typing import Any, Generator
 
@@ -337,11 +338,17 @@ def generate_graph_sse(
                 defaults.append("radius_km: 4")
             if final_state.get("budget_min") == 0:
                 defaults.append("budget_min: 0")
+                
+            validated_props = final_state.get("validated_property_urls", []) or []
+            enable_scraping = os.environ.get("ENABLE_PROPERTY_SCRAPING", "false").lower() == "true"
+            property_links_count = len(validated_props) if enable_scraping else 0
+            
             search_meta = {
                 'type': 'search_meta',
                 'portals_searched': len(generated),
                 'portals_returned': len(validated),
                 'portals_dropped': dropped,
+                'property_links_count': property_links_count,
                 'clarification_rounds': final_state.get('clarification_round', 0),
                 'defaults_applied': defaults
             }
