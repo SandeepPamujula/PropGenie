@@ -39,7 +39,7 @@ def validate_url_structure(url: str, intent: str) -> str | None:
         flow = intent.lower() if intent else URLValidatorConstants.FLOW_RENT
         if URLValidatorConstants.FLOW_RENT in path.lower():
             flow = URLValidatorConstants.FLOW_RENT
-        elif "sale" in path.lower() or URLValidatorConstants.FLOW_BUY in path.lower():
+        elif URLValidatorConstants.PATH_SEGMENT_SALE in path.lower() or URLValidatorConstants.FLOW_BUY in path.lower() or URLValidatorConstants.PATH_SEGMENT_PLOT in path.lower():
             flow = URLValidatorConstants.FLOW_BUY
             
         # 3. Budget values validation (numeric and within logical bounds)
@@ -125,8 +125,8 @@ def validate_property_url_structure(url: str, portal: str, search_urls: list[str
         if portal == "NoBroker":
             if not netloc.endswith(URLValidatorConstants.NOBROKER_DOMAIN):
                 return f"Domain '{netloc}' is not a NoBroker domain"
-            if not (path.startswith("/property/rent/") or path.startswith("/property/sale/")):
-                return "Path does not start with property rent/sale prefix"
+            if not (path.startswith(URLValidatorConstants.PREFIX_PROPERTY_RENT) or path.startswith(URLValidatorConstants.PREFIX_PROPERTY_SALE) or path.startswith(URLValidatorConstants.PREFIX_PROPERTY_PLOT)):
+                return "Path does not start with property rent/sale/plot prefix"
             parts = [p for p in path.split('/') if p]
             if len(parts) < URLValidatorConstants.NOBROKER_MIN_PATH_SEGMENTS:
                 return f"Path has insufficient segments ({len(parts)} < {URLValidatorConstants.NOBROKER_MIN_PATH_SEGMENTS})"

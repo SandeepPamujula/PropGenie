@@ -7,7 +7,7 @@ export interface ChatHeaderProps {
 
 export function ChatHeader({
   currentSearches = 0,
-  maxSearches = 10,
+  maxSearches = 50,
 }: ChatHeaderProps): ReactElement {
   return (
     <div id="chat-header" className="flex w-full items-center justify-between px-4 py-3 sm:px-6">

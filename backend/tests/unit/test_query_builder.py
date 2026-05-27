@@ -16,7 +16,13 @@ def test_query_builder_happy_path_bangalore(mock_chat_bedrock: MagicMock) -> Non
     mock_instance = MagicMock()
     mock_msg = MagicMock()
     mock_msg.content = json.dumps({
-        "nobroker": "Indiranagar",
+        "nobroker": {
+            "locality": "Indiranagar",
+            "placeName": "Indiranagar",
+            "lat": 12.9783692,
+            "lon": 77.6408356,
+            "placeId": "ChIJkQN3GKQWrjsRNhBQJrhGD7U"
+        },
         "99acres": "indiranagar-bangalore"
     })
     mock_instance.invoke.return_value = mock_msg
@@ -45,6 +51,21 @@ def test_query_builder_happy_path_bangalore(mock_chat_bedrock: MagicMock) -> Non
     assert query_nb["type"] == ["BHK3"]
     assert query_nb["rent"] == ["25000,35000"]
     assert query_nb["buildingType"] == ["AP"]
+    assert query_nb["radius"] == ["4.0"]
+    assert query_nb["city"] == ["bangalore"]
+    assert query_nb["locality"] == ["Indiranagar"]
+    assert "searchParam" in query_nb
+    
+    # Verify searchParam decoded JSON structure
+    import base64
+    search_param_val = query_nb["searchParam"][0]
+    decoded_json = json.loads(base64.b64decode(search_param_val).decode('utf-8'))
+    assert decoded_json == [{
+        "lat": 12.9783692,
+        "lon": 77.6408356,
+        "placeId": "ChIJkQN3GKQWrjsRNhBQJrhGD7U",
+        "placeName": "Indiranagar"
+    }]
 
     # Parse and validate 99acres URL
     acres_url = next(u for u in urls if "99acres.com" in u)
@@ -119,30 +140,116 @@ def test_query_builder_skip_unsupported_city(mock_chat_bedrock: MagicMock) -> No
 
 
 @patch("agents.query_builder.ChatBedrock")
-def test_query_builder_skip_unsupported_property_type(mock_chat_bedrock: MagicMock) -> None:
+def test_query_builder_plot_property_type(mock_chat_bedrock: MagicMock) -> None:
     """
-    Verifies that if a portal doesn't support a property type (e.g., NoBroker does not support plots),
-    it is skipped gracefully.
+    Verifies that:
+    1. If the flow is Rent and property type is 'plot', NoBroker is skipped gracefully (only 99acres generated).
+    2. If the flow is Buy and property type is 'plot', NoBroker is NOT skipped and generates correct plot URL.
     """
     mock_instance = MagicMock()
     mock_msg = MagicMock()
     mock_msg.content = json.dumps({
-        "nobroker": "Indiranagar",
+        "nobroker": {
+            "locality": "Indiranagar",
+            "placeName": "Indiranagar",
+            "lat": 12.9783692,
+            "lon": 77.6408356,
+            "placeId": "ChIJkQN3GKQWrjsRNhBQJrhGD7U"
+        },
         "99acres": "indiranagar-bangalore"
     })
     mock_instance.invoke.return_value = mock_msg
     mock_chat_bedrock.return_value = mock_instance
 
-    state = get_initial_state("session-qb-property-type", "127.0.0.1")
+    # 1. Rent flow for plot (NoBroker does not support plot rent)
+    state_rent = get_initial_state("session-qb-property-type-rent", "127.0.0.1")
+    state_rent["intent"] = "Rent"
+    state_rent["city"] = "Bangalore"
+    state_rent["location_anchor"] = "Indiranagar"
+    state_rent["property_type"] = "plot"
+
+    updates_rent = query_builder_node(state_rent)
+    urls_rent = updates_rent["generated_urls"]
+
+    # Only 99acres URL should be generated; NoBroker should be skipped for rent plots
+    assert len(urls_rent) == 1
+    assert "99acres.com" in urls_rent[0]
+    assert "nobroker.in" not in urls_rent[0]
+
+    # 2. Buy flow for plot (NoBroker supports plot buy)
+    state_buy = get_initial_state("session-qb-property-type-buy", "127.0.0.1")
+    state_buy["intent"] = "Buy"
+    state_buy["city"] = "Bangalore"
+    state_buy["location_anchor"] = "Indiranagar"
+    state_buy["property_type"] = "plot"
+    state_buy["budget_min"] = 3400000
+    state_buy["budget_max"] = 30000000
+
+    updates_buy = query_builder_node(state_buy)
+    urls_buy = updates_buy["generated_urls"]
+
+    # Both portals should generate URLs
+    assert len(urls_buy) == 2
+
+    # Parse and validate NoBroker plot URL
+    nb_url = next(u for u in urls_buy if "nobroker.in" in u)
+    parsed_nb = urlparse(nb_url)
+    assert parsed_nb.path == "/property/plot/bangalore/Indiranagar"
+    query_nb = parse_qs(parsed_nb.query)
+    
+    # Assert filters
+    assert "type" not in query_nb  # BHK should not be in the query
+    assert "buildingType" not in query_nb  # buildingType should not be in the query
+    assert query_nb["price"] == ["3400000,30000000"]
+    assert query_nb["city"] == ["bangalore"]
+    assert query_nb["locality"] == ["Indiranagar"]
+    assert query_nb["radius"] == ["4.0"]
+    assert "searchParam" in query_nb
+
+
+@patch("agents.query_builder.ChatBedrock")
+def test_query_builder_buy_house_property_type(mock_chat_bedrock: MagicMock) -> None:
+    """
+    Verifies that when property_type is "house" or "independent house" during a Buy flow,
+    NoBroker URL is generated with 'propertyType=independent-house'.
+    """
+    mock_instance = MagicMock()
+    mock_msg = MagicMock()
+    mock_msg.content = json.dumps({
+        "nobroker": {
+            "locality": "Indiranagar",
+            "placeName": "Indiranagar",
+            "lat": 12.9783692,
+            "lon": 77.6408356,
+            "placeId": "ChIJkQN3GKQWrjsRNhBQJrhGD7U"
+        },
+        "99acres": "indiranagar-bangalore"
+    })
+    mock_instance.invoke.return_value = mock_msg
+    mock_chat_bedrock.return_value = mock_instance
+
+    state = get_initial_state("session-qb-buy-house", "127.0.0.1")
     state["intent"] = "Buy"
     state["city"] = "Bangalore"
     state["location_anchor"] = "Indiranagar"
-    state["property_type"] = "plot"  # NoBroker does not support plots; 99acres supports it (not filtered)
+    state["property_type"] = "house"
+    state["bhk"] = 3
+    state["budget_min"] = 10000000
+    state["budget_max"] = 30000000
 
     updates = query_builder_node(state)
     urls = updates["generated_urls"]
 
-    # Only 99acres URL should be generated; NoBroker should be skipped
-    assert len(urls) == 1
-    assert "99acres.com" in urls[0]
-    assert "nobroker.in" not in urls[0]
+    # Parse and validate NoBroker URL
+    nb_url = next(u for u in urls if "nobroker.in" in u)
+    parsed_nb = urlparse(nb_url)
+    assert parsed_nb.path == "/property/sale/bangalore/Indiranagar"
+    query_nb = parse_qs(parsed_nb.query)
+    
+    assert query_nb["type"] == ["BHK3"]
+    assert query_nb["price"] == ["10000000,30000000"]
+    assert query_nb["propertyType"] == ["independent-house"]
+    assert query_nb["city"] == ["bangalore"]
+    assert query_nb["locality"] == ["Indiranagar"]
+
+

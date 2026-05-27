@@ -33,6 +33,14 @@ rent_params:
       independent: "IH"
       gated_community: "GC"
     delimiter: ","
+  search_param:
+    name: "searchParam"
+  radius:
+    name: "radius"
+  city_name:
+    name: "city"
+  locality_name:
+    name: "locality"
 
 # Parameter mappings for buy/sale searches
 buy_params:
@@ -55,12 +63,20 @@ buy_params:
       semi_furnished: "SEMI_FURNISHED"
       unfurnished: "UNFURNISHED"
   building_type:
-    name: "buildingType"
+    name: "propertyType"
     value_mapping:
-      apartment: "AP"
-      independent: "IH"
-      gated_community: "GC"
+      apartment: "apartment"
+      independent: "independent-house"
+      gated_community: "villa"
     delimiter: ","
+  search_param:
+    name: "searchParam"
+  radius:
+    name: "radius"
+  city_name:
+    name: "city"
+  locality_name:
+    name: "locality"
 
 # Standard lowercase city name mapped to NoBroker's city slug
 city_slug_map:

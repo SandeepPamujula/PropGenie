@@ -14,6 +14,7 @@ from db.search_logger import log_search
 from langgraph.graph import END, StateGraph
 from models.state import AgentState, get_initial_state
 from utils.rate_limiter import increment_rate_limit
+from utils.constants import RateLimitConfig
 from observability.langfuse_tracer import create_trace, flush_traces, update_trace_metadata
 
 
@@ -355,11 +356,24 @@ def generate_graph_sse(
         
         yield f"event: search_meta\ndata: {json.dumps(search_meta)}\n\n"
 
+        # Get actual search count from database dynamically
+        search_count = 1
+        try:
+            from db.connection import get_database
+            from utils.rate_limiter import get_today_ist_string
+            db = get_database()
+            today_ist = get_today_ist_string()
+            rate_limit_doc = db.rate_limits.find_one({"ip": ip, "date": today_ist})
+            if rate_limit_doc:
+                search_count = rate_limit_doc.get("count", 1)
+        except Exception:
+            pass
+
         yield f"event: done\ndata: {json.dumps({
             'type': 'done',
             'session_id': session_id,
-            'search_count_today': 1,
-            'search_limit': 10
+            'search_count_today': search_count,
+            'search_limit': RateLimitConfig.MAX_DAILY_SEARCHES
         })}\n\n"
 
     except Exception as e:

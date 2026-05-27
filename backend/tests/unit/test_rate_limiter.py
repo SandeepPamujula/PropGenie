@@ -7,25 +7,26 @@ from utils.rate_limiter import (
     get_today_ist_string,
     get_next_ist_midnight_string
 )
+from utils.constants import RateLimitConfig
 
 def test_rate_limit_allowed(auto_mock_db_client):
-    """Test that IP with < 10 searches is allowed."""
+    """Test that IP with < RateLimitConfig.MAX_DAILY_SEARCHES searches is allowed."""
     db = get_database()
     today_ist = get_today_ist_string()
     
-    # Insert 9 searches for IP
-    db.rate_limits.insert_one({"ip": "127.0.0.1", "date": today_ist, "count": 9})
+    # Insert MAX - 1 searches for IP
+    db.rate_limits.insert_one({"ip": "127.0.0.1", "date": today_ist, "count": RateLimitConfig.MAX_DAILY_SEARCHES - 1})
     
     # Should not raise exception
     check_rate_limit("127.0.0.1")
 
 def test_rate_limit_exceeded(auto_mock_db_client):
-    """Test that IP with 10+ searches raises RateLimitExceededException."""
+    """Test that IP with MAX+ searches raises RateLimitExceededException."""
     db = get_database()
     today_ist = get_today_ist_string()
     
-    # Insert 10 searches for IP
-    db.rate_limits.insert_one({"ip": "127.0.0.1", "date": today_ist, "count": 10})
+    # Insert MAX searches for IP
+    db.rate_limits.insert_one({"ip": "127.0.0.1", "date": today_ist, "count": RateLimitConfig.MAX_DAILY_SEARCHES})
     
     with pytest.raises(RateLimitExceededException):
         check_rate_limit("127.0.0.1")

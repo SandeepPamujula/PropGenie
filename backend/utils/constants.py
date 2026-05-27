@@ -26,6 +26,12 @@ class URLValidatorConstants:
     NOBROKER_PRICE_PARAM = "price"
     ACRES_BUDGET_MIN_PARAM = "budget_min"
     ACRES_BUDGET_MAX_PARAM = "budget_max"
+    
+    PATH_SEGMENT_SALE = "sale"
+    PATH_SEGMENT_PLOT = "plot"
+    PREFIX_PROPERTY_RENT = "/property/rent/"
+    PREFIX_PROPERTY_SALE = "/property/sale/"
+    PREFIX_PROPERTY_PLOT = "/property/plot/"
 
 
 class PropertyScraperConstants:
@@ -50,3 +56,18 @@ class PropertyScraperConstants:
     ACRES_MIN_PATH_SEGMENTS = 2
     
     ACRES_CITY_PATTERN = r"^[a-zA-Z0-9-]+-(?:bangalore|mumbai|pune|chennai|hyderabad|delhi-ncr|delhi)$"
+    
+    PREFIX_PROPERTY_RENT = "/property/rent/"
+    PREFIX_PROPERTY_SALE = "/property/sale/"
+    PREFIX_PROPERTY_PLOT = "/property/plot/"
+    PORTAL_NOBROKER = "NoBroker"
+    PORTAL_99ACRES = "99acres"
+
+
+class RateLimitConfig:
+    """
+    Constants for API rate limiting.
+    """
+    MAX_DAILY_SEARCHES = 50
+
+

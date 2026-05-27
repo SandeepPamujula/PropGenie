@@ -44,13 +44,14 @@ def extract_properties_from_html(html: str, portal: str) -> List[str]:
             netloc = parsed.netloc.lower()
             path = parsed.path
             
-            if portal == "NoBroker":
+            if portal == PropertyScraperConstants.PORTAL_NOBROKER:
                 # Check domain compatibility (if specified, must contain nobroker.in)
                 if netloc and PropertyScraperConstants.NOBROKER_DOMAIN not in netloc:
                     continue
-                # Match /property/rent/<city>/<locality>/<property-id> 
-                # or /property/sale/<city>/<locality>/<property-id>
-                if path.startswith("/property/rent/") or path.startswith("/property/sale/"):
+                # Match /property/rent/<city>/<locality>/<property-id>, 
+                # /property/sale/<city>/<locality>/<property-id>,
+                # or /property/plot/<city>/<locality>/<property-id>
+                if path.startswith(PropertyScraperConstants.PREFIX_PROPERTY_RENT) or path.startswith(PropertyScraperConstants.PREFIX_PROPERTY_SALE) or path.startswith(PropertyScraperConstants.PREFIX_PROPERTY_PLOT):
                     # We expect at least 3 segments after the prefix: e.g. city, locality, property-id
                     # path.split('/') yields ['', 'property', 'rent/sale', 'city', 'locality', 'property-id']
                     # removing empty strings leaves: ['property', 'rent/sale', 'city', 'locality', 'property-id'] (length >= 5)
@@ -61,7 +62,7 @@ def extract_properties_from_html(html: str, portal: str) -> List[str]:
                             seen.add(abs_url)
                             extracted.append(abs_url)
                             
-            elif portal == "99acres":
+            elif portal == PropertyScraperConstants.PORTAL_99ACRES:
                 # Check domain compatibility (if specified, must contain 99acres.com)
                 if netloc and PropertyScraperConstants.ACRES_DOMAIN not in netloc:
                     continue

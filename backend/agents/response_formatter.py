@@ -149,6 +149,21 @@ def response_formatter_node(state: AgentState) -> dict[str, Any]:
         "defaults_applied": defaults_applied
     }
 
+    # Append assistant's final response to messages list to maintain conversation structure
+    from datetime import datetime, timezone
+    messages = list(state.get("messages", []))
+    if formatted_urls:
+        assistant_content = f"Here are the listings I found matching your criteria: {summary}"
+    else:
+        assistant_content = "I could not find any matching listings on the search portals."
+        
+    if not any(m.get("role") == "assistant" and m.get("content") == assistant_content for m in messages):
+        messages.append({
+            "role": "assistant",
+            "content": assistant_content,
+            "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        })
+
     print(f"[Response Formatter Agent] Completed. Formatted {len(formatted_urls)} URLs.")
     
     # End Langfuse span
@@ -162,5 +177,7 @@ def response_formatter_node(state: AgentState) -> dict[str, Any]:
     return {
         "validated_urls": formatted_urls,
         "search_meta": search_meta,
-        "search_completed": True
+        "search_completed": True,
+        "messages": messages
     }
+
