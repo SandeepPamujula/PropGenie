@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 
 from db.connection import get_database
 from utils.constants import RateLimitConfig
+from utils.logger import get_ip_hash_short
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ def check_rate_limit(ip: str) -> None:
     Raises RateLimitException if limit is exceeded.
     """
     cleaned = clean_ip(ip)
+    ip_hash = get_ip_hash_short(cleaned)
     today_ist = get_today_ist_string()
     
     try:
@@ -77,13 +79,13 @@ def check_rate_limit(ip: str) -> None:
         rate_limit_doc = db.rate_limits.find_one({"ip": cleaned, "date": today_ist})
         
         if rate_limit_doc and rate_limit_doc.get("count", 0) >= RateLimitConfig.MAX_DAILY_SEARCHES:
-            logger.warning(f"[RATE_LIMIT_EXCEEDED] IP {cleaned} exceeded daily limit of {RateLimitConfig.MAX_DAILY_SEARCHES}.")
-            raise RateLimitException(f"Rate limit exceeded for IP {cleaned}")
+            logger.warning(f"[RATE_LIMIT_EXCEEDED] IP hash {ip_hash} exceeded daily limit of {RateLimitConfig.MAX_DAILY_SEARCHES}.")
+            raise RateLimitException(f"Rate limit exceeded for IP")
             
     except RateLimitException:
         raise
     except Exception as e:
-        logger.error(f"Failed to check rate limit for IP {cleaned}. Error: {e}. Allowing request (fail-open).")
+        logger.error(f"Failed to check rate limit for IP hash {ip_hash}. Error: {e}. Allowing request (fail-open).")
         # Fail open, so we do nothing and allow it to proceed
         pass
 
@@ -93,6 +95,7 @@ def increment_rate_limit(ip: str) -> None:
     Uses an atomic upsert with a 2-day TTL on expires_at.
     """
     cleaned = clean_ip(ip)
+    ip_hash = get_ip_hash_short(cleaned)
     today_ist = get_today_ist_string()
     now_utc = datetime.now(timezone.utc)
     
@@ -117,5 +120,5 @@ def increment_rate_limit(ip: str) -> None:
             upsert=True
         )
     except Exception as e:
-        logger.error(f"Failed to increment rate limit for IP {cleaned}. Error: {e}")
+        logger.error(f"Failed to increment rate limit for IP hash {ip_hash}. Error: {e}")
 

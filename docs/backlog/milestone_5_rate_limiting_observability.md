@@ -54,7 +54,7 @@ So that rate limiting accurately reflects actual search usage.
 - TTL automatically removes records when `expires_at` is reached (~2 days)
 - Concurrent increments from the same IP are handled atomically (no race condition)
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -93,7 +93,7 @@ So that I can analyze search patterns, popular cities, and portal performance ov
 - Token usage (input/output) is captured per search
 - Clarification-only interactions do not produce a search log
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -128,7 +128,7 @@ So that I can monitor LLM performance, detect hallucinations, and track costs.
 - Traces are visible in the Langfuse dashboard with correct session grouping
 - Langfuse client failures are caught and logged — never crash the agent pipeline
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -157,4 +157,4 @@ So that I can set up dashboards and alarms for operational visibility beyond def
 - Log levels are appropriate: INFO for normal operations, WARNING for rate limits, ERROR for failures
 - No sensitive data (raw IP, MongoDB URI) appears in logs
 
-**Status:** Not Started
+**Status:** Completed

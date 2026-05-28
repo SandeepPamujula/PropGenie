@@ -1,8 +1,11 @@
 import concurrent.futures
+import logging
 import urllib.error
 import urllib.request
 import re
 from typing import Any, Optional, Dict
+
+logger = logging.getLogger(__name__)
 from urllib.parse import parse_qs, urlparse
 from observability.langfuse_tracer import create_span, end_span
 from models.state import AgentState
@@ -165,7 +168,7 @@ def validate_scraped_properties(
         
         error = validate_property_url_structure(url, portal, search_urls)
         if error:
-            print(f"[URL Validator] Property URL '{url}' failed structural checks: {error}")
+            logger.warning(f"[URL_VALIDATION_FAILED] Property URL '{url}' failed structural checks: {error}")
             dropped_info[url] = f"Structural Validation: {error}"
         else:
             valid_struct_items.append(item)
@@ -198,7 +201,7 @@ def validate_scraped_properties(
                         })
                     else:
                         fail_reason = err or f"HTTP status {status_code}"
-                        print(f"[URL Validator] Property URL '{url}' failed liveness check: {fail_reason}")
+                        logger.warning(f"[URL_VALIDATION_FAILED] Property URL '{url}' failed liveness check: {fail_reason}")
                         dropped_info[url] = f"HEAD Check: {fail_reason}"
                 except Exception as e:
                     print(f"[URL Validator] Exception checking liveness of '{url}': {e}")
@@ -261,7 +264,7 @@ def url_validator_node(state: AgentState) -> dict[str, Any]:
     for url in generated_urls:
         error = validate_url_structure(url, intent)
         if error:
-            print(f"[URL Validator] URL '{url}' failed structural checks: {error}")
+            logger.warning(f"[URL_VALIDATION_FAILED] Search URL '{url}' failed structural checks: {error}")
             dropped_info[url] = f"Structural Validation: {error}"
         else:
             valid_struct_urls.append(url)
@@ -289,7 +292,7 @@ def url_validator_node(state: AgentState) -> dict[str, Any]:
                         })
                     else:
                         fail_reason = err or f"HTTP status {status_code}"
-                        print(f"[URL Validator] URL '{url}' failed liveness check: {fail_reason}")
+                        logger.warning(f"[URL_VALIDATION_FAILED] Search URL '{url}' failed liveness check: {fail_reason}")
                         dropped_info[url] = f"HEAD Check: {fail_reason}"
                 except Exception as e:
                     print(f"[URL Validator] Exception checking liveness of '{url}': {e}")
