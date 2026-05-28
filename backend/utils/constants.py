@@ -68,6 +68,7 @@ class RateLimitConfig:
     """
     Constants for API rate limiting.
     """
-    MAX_DAILY_SEARCHES = 50
+    MAX_DAILY_SEARCHES = 10
+
 
 

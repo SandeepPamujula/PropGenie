@@ -1,7 +1,10 @@
 import json
+import logging
 import re
 from datetime import datetime, timezone
 from typing import Any
+
+logger = logging.getLogger(__name__)
 from langchain_aws import ChatBedrock
 from langchain_core.messages import SystemMessage
 from observability.langfuse_tracer import (
@@ -157,7 +160,11 @@ def query_builder_node(state: AgentState) -> dict[str, Any]:
             )
             
             # Invoke model
+            llm_start = time.time()
             response = llm.invoke([SystemMessage(content=prompt)])
+            llm_latency = int((time.time() - llm_start) * 1000)
+            logger.info(f"[BEDROCK_CALL] Model {model_id} invoked. Latency: {llm_latency}ms")
+            
             content = response.content if hasattr(response, "content") else response
             response_text = str(content).strip()
             print(f"[Query Builder Agent] LLM Raw Mapping Response: {response_text}")

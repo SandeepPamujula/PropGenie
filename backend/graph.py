@@ -1,7 +1,10 @@
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from typing import Any, Generator
+
+logger = logging.getLogger(__name__)
 
 from agents.clarification import clarification_node
 from agents.orchestrator import orchestrator_node
@@ -92,6 +95,9 @@ def save_state(state: AgentState) -> dict[str, Any]:
         ip = state.get("ip", "")
         if ip:
             increment_rate_limit(ip)
+        
+        # Log custom Search completed marker
+        logger.info(f"[SEARCH_COMPLETED] Search completed successfully for session {session_id}.")
         
         # Log the search analytics
         log_search(session_id, ip, state)

@@ -10,10 +10,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from graph import generate_graph_sse
 from pydantic import BaseModel
-from utils.rate_limiter import check_rate_limit, RateLimitExceededException, get_next_ist_midnight_string
+from utils.rate_limiter import check_rate_limit, RateLimitException, get_next_ist_midnight_string
 from utils.constants import RateLimitConfig
+from utils.logger import setup_logging, request_id_var
+
+# Configure structured JSON logging on startup
+setup_logging()
 
 app = FastAPI(title="PropGenie Backend Service", version="1.0.0")
+
+@app.middleware("http")
+async def add_request_id_middleware(request: Request, call_next):
+    import uuid
+    # Use session ID or generate a unique ID to correlate logs for this request
+    x_session_id = request.headers.get("x-session-id") or str(uuid.uuid4())
+    token = request_id_var.set(x_session_id)
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        request_id_var.reset(token)
 
 # Enable CORS for local Next.js development
 app.add_middleware(
@@ -86,7 +102,7 @@ async def chat(
     # Rate Limit Check
     try:
         check_rate_limit(ip)
-    except RateLimitExceededException:
+    except RateLimitException:
         return JSONResponse(
             status_code=429,
             content={

@@ -9,7 +9,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from graph import generate_graph_sse
-from utils.rate_limiter import check_rate_limit, RateLimitExceededException, get_next_ist_midnight_string
+from utils.rate_limiter import check_rate_limit, RateLimitException, get_next_ist_midnight_string
+from utils.logger import setup_logging, set_request_id
+
+# Configure structured JSON logging on handler load
+setup_logging()
 
 
 def lambda_handler(event: dict[str, Any], *args: Any) -> Any:
@@ -21,6 +25,10 @@ def lambda_handler(event: dict[str, Any], *args: Any) -> Any:
     # 1. Parse Routing and Path Information
     raw_path = event.get("rawPath") or "/"
     request_context = event.get("requestContext", {})
+    
+    # Set request ID context variable
+    aws_request_id = request_context.get("requestId") or str(uuid.uuid4())
+    set_request_id(aws_request_id)
     http_info = request_context.get("http", {})
     method = http_info.get("method", "GET").upper()
 
@@ -86,7 +94,7 @@ def lambda_handler(event: dict[str, Any], *args: Any) -> Any:
         # 3.1 Rate Limit Check
         try:
             check_rate_limit(ip)
-        except RateLimitExceededException:
+        except RateLimitException:
             return {
                 "statusCode": 429,
                 "headers": {"Content-Type": "application/json"},

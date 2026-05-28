@@ -1,5 +1,6 @@
 import json
 from typing import List
+from unittest.mock import patch
 
 from handler import lambda_handler
 
@@ -96,3 +97,27 @@ def test_lambda_handler_not_found() -> None:
     assert response["statusCode"] == 404
     body = json.loads(response["body"])
     assert body["error"] == "not_found"
+
+
+@patch("handler.check_rate_limit")
+def test_lambda_handler_chat_rate_limited(mock_check, auto_mock_db_client) -> None:
+    """
+    Verifies that the Lambda handler returns a 429 when rate limit is exceeded.
+    """
+    from utils.rate_limiter import RateLimitException
+    mock_check.side_effect = RateLimitException("Rate limit exceeded")
+
+    event = {
+        "rawPath": "/api/chat",
+        "requestContext": {"http": {"method": "POST", "sourceIp": "192.168.1.1"}},
+        "headers": {"x-session-id": "test-session-rate-limited"},
+        "body": json.dumps({"message": "looking for a house in bangalore"}),
+    }
+    response = lambda_handler(event, None)
+    assert response["statusCode"] == 429
+    assert response["headers"]["Content-Type"] == "application/json"
+    body = json.loads(response["body"])
+    assert body["error"] == "rate_limit_exceeded"
+    assert "reached your daily search limit" in body["message"]
+    assert "reset_at" in body
+

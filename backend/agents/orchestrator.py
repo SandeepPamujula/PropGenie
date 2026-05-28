@@ -1,7 +1,10 @@
 import json
+import logging
 import re
 from typing import Any, Optional
 from langchain_aws import ChatBedrock
+
+logger = logging.getLogger(__name__)
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from observability.langfuse_tracer import (
     create_span,
@@ -166,7 +169,11 @@ def orchestrator_node(state: AgentState) -> dict[str, Any]:
         )
         
         # Invoke model
+        llm_start = time.time()
         response = llm.invoke(messages_for_llm)
+        llm_latency = int((time.time() - llm_start) * 1000)
+        logger.info(f"[BEDROCK_CALL] Model {model_id} invoked. Latency: {llm_latency}ms")
+        
         content = response.content if hasattr(response, "content") else response
         if isinstance(content, list):
             response_text = json.dumps(content)

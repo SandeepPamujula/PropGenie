@@ -8,7 +8,7 @@ import { ChatLayout } from '@/components/ChatLayout'
 import { MessageList } from '@/components/MessageList'
 import { RateLimitBanner } from '@/components/RateLimitBanner'
 import { sendMessage, SessionExpiredError, RateLimitError } from '@/lib/api'
-import { getSessionId } from '@/lib/session'
+import { getSessionId, resetSessionId } from '@/lib/session'
 import { consumeSSEStream } from '@/lib/sse'
 import type { ChatMessage, PortalResult, SearchMeta } from '@/types/domain'
 
@@ -18,8 +18,8 @@ export default function Home(): ReactElement {
   const [isOnline, setIsOnline] = useState(true)
 
   useEffect(() => {
-    // Generate/initialize session ID on first visit
-    getSessionId()
+    // Generate/initialize a fresh session ID on page load/refresh to keep UI and backend state synchronized
+    resetSessionId()
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsOnline(navigator.onLine)

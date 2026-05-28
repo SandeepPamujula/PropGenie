@@ -3,11 +3,32 @@ from unittest.mock import patch
 from db.connection import get_database
 from utils.rate_limiter import (
     check_rate_limit,
-    RateLimitExceededException,
+    RateLimitException,
     get_today_ist_string,
     get_next_ist_midnight_string
 )
 from utils.constants import RateLimitConfig
+
+def test_clean_ip():
+    """Test that clean_ip correctly extracts IPs and strips ports/brackets."""
+    from utils.rate_limiter import clean_ip
+    
+    # Standard IPv4
+    assert clean_ip("192.168.1.1") == "192.168.1.1"
+    # IPv4 with port
+    assert clean_ip("192.168.1.1:54321") == "192.168.1.1"
+    
+    # Standard IPv6
+    assert clean_ip("2001:db8::1") == "2001:db8::1"
+    # IPv6 with brackets and port
+    assert clean_ip("[2001:db8::1]:12345") == "2001:db8::1"
+    
+    # CloudFront IPv6 with port (no brackets)
+    assert clean_ip("2001:db8:85a3:8d3:1319:8a2e:370:7348:54321") == "2001:db8:85a3:8d3:1319:8a2e:370:7348"
+    
+    # Empty / None
+    assert clean_ip("") == "127.0.0.1"
+    assert clean_ip(None) == "127.0.0.1"
 
 def test_rate_limit_allowed(auto_mock_db_client):
     """Test that IP with < RateLimitConfig.MAX_DAILY_SEARCHES searches is allowed."""
@@ -21,14 +42,14 @@ def test_rate_limit_allowed(auto_mock_db_client):
     check_rate_limit("127.0.0.1")
 
 def test_rate_limit_exceeded(auto_mock_db_client):
-    """Test that IP with MAX+ searches raises RateLimitExceededException."""
+    """Test that IP with MAX+ searches raises RateLimitException."""
     db = get_database()
     today_ist = get_today_ist_string()
     
     # Insert MAX searches for IP
     db.rate_limits.insert_one({"ip": "127.0.0.1", "date": today_ist, "count": RateLimitConfig.MAX_DAILY_SEARCHES})
     
-    with pytest.raises(RateLimitExceededException):
+    with pytest.raises(RateLimitException):
         check_rate_limit("127.0.0.1")
 
 @patch('utils.rate_limiter.get_database')

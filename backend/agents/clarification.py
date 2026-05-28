@@ -1,6 +1,9 @@
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 from langchain_aws import ChatBedrock
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from observability.langfuse_tracer import (
@@ -49,6 +52,9 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
     
     # 2. Check 3-round breach logic (if clarification_round is 3 or more)
     round_count = state.get("clarification_round", 0)
+    session_id = state.get("session_id") or ""
+    logger.info(f"[CLARIFICATION_ROUND] Clarification round {round_count} for session {session_id}")
+    
     if round_count >= 3:
         print(f"[Clarification Agent] 3-round breach detected (round: {round_count}). Applying defaults.")
         updates: dict[str, Any] = {
@@ -134,7 +140,11 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
         )
         
         # Invoke model
+        llm_start = time.time()
         response = llm.invoke(messages_for_llm)
+        llm_latency = int((time.time() - llm_start) * 1000)
+        logger.info(f"[BEDROCK_CALL] Model {model_id} invoked. Latency: {llm_latency}ms")
+        
         question = response.content if hasattr(response, "content") else response
         if isinstance(question, list):
             question_text = str(question[0])
