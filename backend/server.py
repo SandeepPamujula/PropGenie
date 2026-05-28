@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from graph import generate_graph_sse
 from pydantic import BaseModel
-from utils.rate_limiter import check_rate_limit, RateLimitExceededException, get_next_ist_midnight_string
+from utils.rate_limiter import check_rate_limit, RateLimitException, get_next_ist_midnight_string
 from utils.constants import RateLimitConfig
 
 app = FastAPI(title="PropGenie Backend Service", version="1.0.0")
@@ -86,7 +86,7 @@ async def chat(
     # Rate Limit Check
     try:
         check_rate_limit(ip)
-    except RateLimitExceededException:
+    except RateLimitException:
         return JSONResponse(
             status_code=429,
             content={

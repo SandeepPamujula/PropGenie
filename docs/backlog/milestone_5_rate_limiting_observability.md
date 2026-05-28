@@ -28,7 +28,7 @@ So that individual IPs are limited to 10 searches per day and the system is prot
 - Rate limit check uses IST calendar day (not UTC)
 - MongoDB connection failure results in allow (fail-open) with an error log
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 

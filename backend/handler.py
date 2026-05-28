@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from graph import generate_graph_sse
-from utils.rate_limiter import check_rate_limit, RateLimitExceededException, get_next_ist_midnight_string
+from utils.rate_limiter import check_rate_limit, RateLimitException, get_next_ist_midnight_string
 
 
 def lambda_handler(event: dict[str, Any], *args: Any) -> Any:
@@ -86,7 +86,7 @@ def lambda_handler(event: dict[str, Any], *args: Any) -> Any:
         # 3.1 Rate Limit Check
         try:
             check_rate_limit(ip)
-        except RateLimitExceededException:
+        except RateLimitException:
             return {
                 "statusCode": 429,
                 "headers": {"Content-Type": "application/json"},
