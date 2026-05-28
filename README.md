@@ -1,5 +1,7 @@
 # PropGenie
 
+[![CI Pipeline](https://github.com/SandeepPamujula/PropGenie/actions/workflows/ci.yml/badge.svg)](https://github.com/SandeepPamujula/PropGenie/actions/workflows/ci.yml)
+
 AI-powered real estate search assistant for India.
 
 ## Project Structure
