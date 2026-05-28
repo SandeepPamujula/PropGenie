@@ -5,6 +5,7 @@ import { AgentStatus, type AgentPhase } from '../../molecules/AgentStatus/AgentS
 import { ClarificationMessage } from '../../molecules/ClarificationMessage/ClarificationMessage'
 import { PortalCardList } from '../../molecules/PortalCardList/PortalCardList'
 import { SearchMeta } from '../../molecules/SearchMeta/SearchMeta'
+import { PropertyLinkList } from '../../molecules/PropertyLinkList/PropertyLinkList'
 
 export interface MessageListProps {
   messages: ChatMessage[]
@@ -130,16 +131,11 @@ export function MessageList({
                 <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800/80">
                   <div className="h-8 w-full animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-800 mb-3.5"></div>
                   
-                  {/* Shimmering Property Links Skeleton */}
-                  <div className="border-t border-dashed border-zinc-200 dark:border-zinc-800/60 pt-3 flex flex-col gap-2.5">
-                    <div className="h-2.5 w-1/3 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800 mb-1"></div>
-                    {[1, 2, 3].map((j) => (
-                      <div key={j} className="flex items-center gap-2">
-                        <div className="h-5 w-5 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800"></div>
-                        <div className="h-3 flex-1 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800"></div>
-                      </div>
-                    ))}
-                  </div>
+                  <PropertyLinkList
+                    isLoading={true}
+                    portalDisplayName=""
+                    portalNameLower={i === 1 ? 'nobroker' : '99acres'}
+                  />
                 </div>
               </div>
             ))}

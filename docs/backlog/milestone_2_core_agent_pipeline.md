@@ -637,5 +637,21 @@ So that I can quickly click through to the most relevant individual properties.
 - Storybook stories cover all edge cases (0, 1, 3, 5 links)
 - Visual hierarchy clearly distinguishes the search link (primary) from property links (secondary)
 
-**Status:** Not Started
+**Status:** Completed
+
+### Implementation Summary
+- **Design Decisions**:
+  - **Subtle Visual Hierarchy**: Displayed property listing links in a secondary list with custom styles, ensuring the main portal search CTA remains primary and visually prominent.
+  - **Dynamic Card Embedding**: Integrated the `PropertyLinkList` component directly into the `PortalCard` to display links cleanly when available, and dynamically rendering skeleton shimmer states while the `property_scraper` agent is actively running.
+  - **Adaptive Zero State**: Enforced a fallback layout where an empty property links list returns `null`, preventing empty section spacing when no individual property listings are found.
+- **Key Files Created/Modified**:
+  - [PropertyLinkList.tsx](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/components/molecules/PropertyLinkList/PropertyLinkList.tsx): Presentation component that handles empty, loaded, and loading states.
+  - [PortalCard.tsx](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/components/molecules/PortalCard/PortalCard.tsx): Integrated the nested `PropertyLinkList` component.
+  - [MessageList.tsx](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/components/organisms/MessageList/MessageList.tsx): Included the skeleton shimmer loading representation for the property scraping node.
+  - [PropertyLinkList.stories.tsx](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/components/molecules/PropertyLinkList/PropertyLinkList.stories.tsx): Stories for NoLinks, OneLink, ThreeLinks, FiveLinks, and Loading states.
+  - [PropertyLinkList.test.tsx](file:///c:/Users/Susmi/Desktop/sandeep/ws/PropGenie/frontend/src/components/molecules/PropertyLinkList/PropertyLinkList.test.tsx): Unit tests for empty states, loading shimmer states, link-capping bounds, and HTML attribute assertions.
+- **Verification/Testing Steps**:
+  - Run frontend compilation type checks: `npx tsc --noEmit` passed with 0 compilation issues.
+  - Executed all 52 Jest frontend tests: passed 100% (including `PropertyLinkList.test.tsx`).
+  - Ran all 91 pytest backend unit tests: passed 100%.
 

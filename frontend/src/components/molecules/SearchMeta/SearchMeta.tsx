@@ -1,4 +1,5 @@
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
+import { WorkflowGraph } from '../WorkflowGraph/WorkflowGraph'
 
 export interface SearchMetaProps {
   portalsSearched: number
@@ -13,6 +14,8 @@ export function SearchMeta({
   defaultsApplied = [],
   portalsDropped = [],
 }: SearchMetaProps): ReactElement {
+  const [showGraph, setShowGraph] = useState(false)
+
   // Helper to format technical default strings into user-friendly notes
   const formatDefaultApplied = (def: string): string => {
     const d = def.trim().toLowerCase()
@@ -33,19 +36,33 @@ export function SearchMeta({
       className="flex flex-col gap-2 mt-3.5 px-1 py-2 w-full max-w-2xl border-t border-zinc-200/50 dark:border-zinc-800/40"
     >
       {/* Summary count bar */}
-      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-        <svg className="h-4 w-4 text-zinc-400 dark:text-zinc-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span id="search-meta-counts">
-          Searched {portalsSearched} portal{portalsSearched === 1 ? '' : 's'} · {portalsReturned} result{portalsReturned === 1 ? '' : 's'}
-        </span>
-
-        {portalsDropped.length > 0 && (
-          <span id="search-meta-dropped" className="text-[10px] text-zinc-400 dark:text-zinc-500 font-normal">
-            ({portalsDropped.length} empty or invalid results dropped)
+      <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+        <div className="flex items-center gap-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+          <svg className="h-4 w-4 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span id="search-meta-counts">
+            Searched {portalsSearched} portal{portalsSearched === 1 ? '' : 's'} · {portalsReturned} result{portalsReturned === 1 ? '' : 's'}
           </span>
-        )}
+
+          {portalsDropped.length > 0 && (
+            <span id="search-meta-dropped" className="text-[10px] text-zinc-400 dark:text-zinc-500 font-normal">
+              ({portalsDropped.length} empty or invalid results dropped)
+            </span>
+          )}
+        </div>
+
+        {/* Toggle Graph Button */}
+        <button
+          onClick={() => setShowGraph(!showGraph)}
+          id="toggle-meta-graph"
+          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-brand-500 hover:text-brand-600 transition-colors cursor-pointer"
+        >
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          {showGraph ? 'Hide Workflow Graph' : 'Show Workflow Graph'}
+        </button>
       </div>
 
       {/* Defaults applied listed as subtle notes */}
@@ -60,6 +77,13 @@ export function SearchMeta({
               <span>{note}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Workflow Graph display */}
+      {showGraph && (
+        <div id="meta-workflow-graph-wrapper" className="mt-3 p-1 w-full max-w-sm border-t border-zinc-100 dark:border-zinc-800/60 pt-3">
+          <WorkflowGraph currentPhase="complete" />
         </div>
       )}
     </div>

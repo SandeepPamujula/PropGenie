@@ -1,4 +1,5 @@
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
+import { WorkflowGraph } from '../WorkflowGraph/WorkflowGraph'
 
 export interface ClarificationMessageProps {
   question: string
@@ -13,6 +14,8 @@ export function ClarificationMessage({
   maxRounds = 3,
   resolvedFields = {},
 }: ClarificationMessageProps): ReactElement {
+  const [showGraph, setShowGraph] = useState(false)
+
   // Helper to format field names and values nicely
   const formatResolvedField = (
     key: string,
@@ -83,14 +86,28 @@ export function ClarificationMessage({
       id="clarification-message"
       className="flex flex-col gap-3 rounded-2xl border border-amber-500/20 bg-amber-50/20 p-4 shadow-sm dark:border-amber-500/30 dark:bg-amber-900/10 w-full animate-fade-in"
     >
-      <div className="flex items-center justify-between border-b border-amber-500/10 pb-2 dark:border-amber-500/20">
-        <span
-          id="clarification-round-indicator"
-          className="text-xs font-semibold text-amber-800 dark:text-amber-300"
+      <div className="flex items-center justify-between border-b border-amber-500/10 pb-2 dark:border-amber-500/20 gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            id="clarification-round-indicator"
+            className="text-xs font-semibold text-amber-800 dark:text-amber-300"
+          >
+            Clarification Round {round} of {maxRounds}
+          </span>
+          <span className="flex h-2 w-2 shrink-0 rounded-full bg-amber-500 animate-pulse-slow"></span>
+        </div>
+
+        {/* Toggle Graph Button */}
+        <button
+          onClick={() => setShowGraph(!showGraph)}
+          id="toggle-clarification-graph"
+          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-200 transition-colors cursor-pointer shrink-0"
         >
-          Clarification Round {round} of {maxRounds}
-        </span>
-        <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse-slow"></span>
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          {showGraph ? 'Hide Workflow' : 'Show Workflow'}
+        </button>
       </div>
 
       <p
@@ -119,6 +136,13 @@ export function ClarificationMessage({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Workflow Graph display */}
+      {showGraph && (
+        <div id="clarification-workflow-graph-wrapper" className="mt-2 p-1 w-full max-w-sm border-t border-amber-500/10 dark:border-amber-500/20 pt-3 self-center">
+          <WorkflowGraph currentPhase="clarification" />
         </div>
       )}
     </div>

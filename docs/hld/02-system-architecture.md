@@ -85,29 +85,20 @@ C4Container
 
 ```mermaid
 stateDiagram-v2
-    [*] --> RestoreState: New message arrives
-    RestoreState --> RateLimitCheck: Load session from MongoDB
+    [*] --> restore_state: User message arrives
+    restore_state --> orchestrator: Load session & merge message
 
-    RateLimitCheck --> Orchestrator: Under limit
-    RateLimitCheck --> RateLimitDenied: Limit exceeded (429)
-    RateLimitDenied --> [*]: Return 429 response
+    orchestrator --> clarification: Missing required parameters
+    orchestrator --> query_builder: All parameters resolved
 
-    Orchestrator --> Clarification: Missing/ambiguous fields
-    Orchestrator --> QueryBuilder: All fields resolved
-
-    Clarification --> StreamResponse: Emit clarification question
-    StreamResponse --> SaveState: Save graph state to MongoDB
-    SaveState --> [*]: Return SSE stream to user
-
-    QueryBuilder --> URLValidator: URLs generated
-    URLValidator --> ResponseFormatter: Valid URLs
-    URLValidator --> ResponseFormatter: Some URLs dropped
-
-    ResponseFormatter --> StreamResponse2: Emit portal cards
-    StreamResponse2 --> LogSearch: Write to search_logs
-    LogSearch --> IncrementRateLimit: Increment IP counter
-    IncrementRateLimit --> SaveState2: Save final state
-    SaveState2 --> [*]: Return SSE stream to user
+    clarification --> save_state: Emit clarification question SSE
+    
+    query_builder --> url_validator: Build deep-link URLs
+    url_validator --> property_scraper: Validated search URLs
+    property_scraper --> response_formatter: Scraped property listings
+    response_formatter --> save_state: Format portal card SSE & metadata
+    
+    save_state --> [*]: Save session state & terminate stream
 ```
 
 **Graph nodes (all run in a single Lambda invocation):**
@@ -115,10 +106,10 @@ stateDiagram-v2
 | Node | Purpose | LLM call? |
 |------|---------|-----------|
 | `restore_state` | Load session from MongoDB, rehydrate LangGraph state | No |
-| `rate_limit_check` | Check IP rate limit in MongoDB, reject if exceeded | No |
 | `orchestrator` | Intent classification, entity extraction, completeness check | Yes |
-| `clarification` | Generate one clarifying question | Yes |
+| `clarification` | Generate one clarifying question (or apply defaults after 3 rounds) | Yes |
 | `query_builder` | Build portal-specific deep-link URLs | Yes (for location mapping) |
-| `url_validator` | Validate URLs structurally + HTTP HEAD | No |
-| `response_formatter` | Format portal cards for SSE output | No (template-based) |
-| `save_state` | Persist graph state + session to MongoDB | No |
+| `url_validator` | Validate search URLs structurally + HTTP HEAD checks | No |
+| `property_scraper` | Fetch search HTML page and extract top 5 individual property listing links | No (uses HTMLParser) |
+| `response_formatter` | Format portal cards and property links for SSE output | No |
+| `save_state` | Persist graph state + session to MongoDB, update trace metadata | No |

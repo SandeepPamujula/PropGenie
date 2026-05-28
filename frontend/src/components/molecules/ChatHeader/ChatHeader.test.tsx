@@ -13,6 +13,6 @@ describe('ChatHeader', () => {
 
   it('uses default values when props are omitted', () => {
     render(<ChatHeader />)
-    expect(screen.getByText('0 of 10 searches used today')).toBeInTheDocument()
+    expect(screen.getByText('0 of 50 searches used today')).toBeInTheDocument()
   })
 })
