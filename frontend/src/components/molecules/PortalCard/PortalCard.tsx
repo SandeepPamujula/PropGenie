@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import type { PortalResult } from '../../../types/domain'
 import { PORTAL_CONFIG, PRIORITY_LABELS } from '../../../lib/constants'
+import { PropertyLinkList } from '../PropertyLinkList/PropertyLinkList'
 
 export interface PortalCardProps {
   card: PortalResult
@@ -96,38 +97,11 @@ export function PortalCard({ card }: PortalCardProps): ReactElement {
         </a>
 
         {/* Property Links Section */}
-        {propertyLinks && propertyLinks.length > 0 && (
-          <div
-            id={`property-links-${portal.toLowerCase()}`}
-            className="mt-3.5 pt-3 border-t border-dashed border-zinc-200 dark:border-zinc-800/60 flex flex-col gap-2"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block mb-1">
-              Top Listings Found
-            </span>
-            <div className="flex flex-col gap-2">
-              {propertyLinks.map((link) => (
-                <a
-                  key={link.url}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  id={`property-link-${portal.toLowerCase()}-${link.rank}`}
-                  className="flex items-center gap-2 group/link text-xs text-zinc-600 hover:text-brand-500 dark:text-zinc-400 dark:hover:text-brand-400 transition-colors duration-150"
-                >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 group-hover/link:bg-brand-500 group-hover/link:text-white transition-colors duration-150">
-                    {link.rank}
-                  </span>
-                  <span className="truncate flex-1 hover:underline">
-                    View Property #{link.rank} on {details.displayName}
-                  </span>
-                  <svg className="h-3 w-3 shrink-0 opacity-0 group-hover/link:opacity-100 transition-opacity duration-150" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
-                  </svg>
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
+        <PropertyLinkList
+          propertyLinks={propertyLinks}
+          portalDisplayName={details.displayName}
+          portalNameLower={portal.toLowerCase()}
+        />
       </div>
     </div>
   )

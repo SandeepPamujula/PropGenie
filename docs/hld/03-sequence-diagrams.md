@@ -48,9 +48,19 @@ sequenceDiagram
     Agent->>LF: Span: url_validator (pass/fail counts)
     Agent-->>FE: SSE: {type: "agent_status", message: "Verifying links..."}
 
+    Note over Agent: property_scraper node
+    loop For each validated search URL
+        Agent->>Portals: HTTP GET request (fetch HTML results page)
+        Portals-->>Agent: 200 OK HTML
+        Agent->>Agent: Parse HTML, extract top 5 property listing URLs
+        Agent->>Agent: Run concurrent HEAD check on listing URLs
+    end
+    Agent->>LF: Span: property_scraper (latency, listing counts)
+    Agent-->>FE: SSE: {type: "agent_status", message: "Fetching top property listings..."}
+
     Note over Agent: response_formatter node
-    Agent-->>FE: SSE: {type: "portal_card", portal: "NoBroker", url: "...", summary: "..."}
-    Agent-->>FE: SSE: {type: "portal_card", portal: "99acres", url: "...", summary: "..."}
+    Agent-->>FE: SSE: {type: "portal_card", portal: "NoBroker", url: "...", summary: "...", property_links: [...]}
+    Agent-->>FE: SSE: {type: "portal_card", portal: "99acres", url: "...", summary: "...", property_links: [...]}
     Agent-->>FE: SSE: {type: "done"}
 
     Note over Agent: save_state + logging

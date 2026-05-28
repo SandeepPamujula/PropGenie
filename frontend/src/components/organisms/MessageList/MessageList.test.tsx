@@ -95,6 +95,6 @@ describe('MessageList', () => {
 
     expect(screen.getByText('Hello')).toBeInTheDocument()
     expect(screen.getByText('Validating links...')).toBeInTheDocument()
-    expect(screen.getByText('URL Validator')).toBeInTheDocument()
+    expect(document.querySelector('#status-phase-label')).toHaveTextContent('URL Validator')
   })
 })
