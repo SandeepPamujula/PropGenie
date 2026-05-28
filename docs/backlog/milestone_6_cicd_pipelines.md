@@ -75,7 +75,7 @@ So that production releases are deliberate and auditable.
 - Smoke test confirms prod health endpoint returns 200
 - Deployment metadata is logged
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
