@@ -1,30 +1,31 @@
-import os
-import time
 import concurrent.futures
-import urllib.request
-import urllib.error
-from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
-from html.parser import HTMLParser
+import os
 import re
+import time
+import urllib.error
+import urllib.request
+from html.parser import HTMLParser
+from typing import Any
+from urllib.parse import urlparse
 
-from models.state import AgentState
-from utils.constants import PropertyScraperConstants
-from observability.langfuse_tracer import create_span, end_span
 from agents.url_validator import validate_scraped_properties
+from models.state import AgentState
+from observability.langfuse_tracer import create_span, end_span
+from utils.constants import PropertyScraperConstants
+
 
 class ALinkExtractor(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
-        self.links: List[str] = []
+        self.links: list[str] = []
 
-    def handle_starttag(self, tag: str, attrs: List[tuple[str, Optional[str]]]) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag.lower() == "a":
             for attr, val in attrs:
                 if attr.lower() == "href" and val:
                     self.links.append(val.strip())
 
-def extract_properties_from_html(html: str, portal: str) -> List[str]:
+def extract_properties_from_html(html: str, portal: str) -> list[str]:
     """
     Parses the HTML search results page and extracts property listing deep links.
     """
@@ -34,21 +35,21 @@ def extract_properties_from_html(html: str, portal: str) -> List[str]:
     except Exception as e:
         print(f"[Property Scraper] Error parsing HTML: {e}")
         return []
-    
-    extracted: List[str] = []
+
+    extracted: list[str] = []
     seen = set()
-    
+
     for href in parser.links:
         try:
             parsed = urlparse(href)
             netloc = parsed.netloc.lower()
             path = parsed.path
-            
+
             if portal == PropertyScraperConstants.PORTAL_NOBROKER:
                 # Check domain compatibility (if specified, must contain nobroker.in)
                 if netloc and PropertyScraperConstants.NOBROKER_DOMAIN not in netloc:
                     continue
-                # Match /property/rent/<city>/<locality>/<property-id>, 
+                # Match /property/rent/<city>/<locality>/<property-id>,
                 # /property/sale/<city>/<locality>/<property-id>,
                 # or /property/plot/<city>/<locality>/<property-id>
                 if path.startswith(PropertyScraperConstants.PREFIX_PROPERTY_RENT) or path.startswith(PropertyScraperConstants.PREFIX_PROPERTY_SALE) or path.startswith(PropertyScraperConstants.PREFIX_PROPERTY_PLOT):
@@ -61,7 +62,7 @@ def extract_properties_from_html(html: str, portal: str) -> List[str]:
                         if abs_url not in seen:
                             seen.add(abs_url)
                             extracted.append(abs_url)
-                            
+
             elif portal == PropertyScraperConstants.PORTAL_99ACRES:
                 # Check domain compatibility (if specified, must contain 99acres.com)
                 if netloc and PropertyScraperConstants.ACRES_DOMAIN not in netloc:
@@ -78,10 +79,10 @@ def extract_properties_from_html(html: str, portal: str) -> List[str]:
                             extracted.append(abs_url)
         except Exception:
             continue
-            
+
     return extracted
 
-def fetch_url(url: str, timeout: float = 5.0) -> tuple[Optional[str], Optional[str]]:
+def fetch_url(url: str, timeout: float = 5.0) -> tuple[str | None, str | None]:
     """
     Performs an HTTP GET request to fetch the HTML content.
     Returns (html_content, error_message).
@@ -109,13 +110,13 @@ def fetch_url(url: str, timeout: float = 5.0) -> tuple[Optional[str], Optional[s
     except Exception as e:
         return None, f"Exception: {str(e)}"
 
-def property_scraper_node(state: AgentState) -> Dict[str, Any]:
+def property_scraper_node(state: AgentState) -> dict[str, Any]:
     """
     LangGraph node to scrape individual property listing links from validated search page URLs.
     """
     print("[Property Scraper Agent] Started execution")
     start_time = time.time()
-    
+
     # 1. Feature Flag Check
     enable_scraping = os.environ.get(PropertyScraperConstants.ENV_ENABLE_SCRAPING, "false").lower() == "true"
     if not enable_scraping:
@@ -124,7 +125,7 @@ def property_scraper_node(state: AgentState) -> Dict[str, Any]:
             "scraped_property_urls": [],
             "validated_property_urls": []
         }
-        
+
     validated_urls = state.get("validated_urls", [])
     if not validated_urls:
         print("[Property Scraper Agent] No validated portal search URLs to scrape")
@@ -132,36 +133,36 @@ def property_scraper_node(state: AgentState) -> Dict[str, Any]:
             "scraped_property_urls": [],
             "validated_property_urls": []
         }
-        
+
     trace = state.get("trace")
     span = create_span(trace, "property_scraper", validated_urls)
-    
+
     # Configuration
     timeout_str = os.environ.get(PropertyScraperConstants.ENV_TIMEOUT, str(PropertyScraperConstants.TIMEOUT_DEFAULT))
     try:
         timeout = float(timeout_str)
     except ValueError:
         timeout = PropertyScraperConstants.TIMEOUT_DEFAULT
-        
+
     max_scraped_str = os.environ.get(PropertyScraperConstants.ENV_MAX_PROPERTIES, str(PropertyScraperConstants.MAX_PROPERTIES_DEFAULT))
     try:
         max_scraped = int(max_scraped_str)
     except ValueError:
         max_scraped = PropertyScraperConstants.MAX_PROPERTIES_DEFAULT
-        
-    scraped_results: List[Dict[str, Any]] = []
-    
+
+    scraped_results: list[dict[str, Any]] = []
+
     # Fetch validated search URLs concurrently
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(validated_urls))) as executor:
         future_to_search = {
             executor.submit(fetch_url, item["url"], timeout): item for item in validated_urls
         }
-        
+
         for future in concurrent.futures.as_completed(future_to_search):
             item = future_to_search[future]
             search_url = item["url"]
             portal = item["portal"]
-            
+
             try:
                 html_content, err = future.result()
                 if err:
@@ -170,11 +171,11 @@ def property_scraper_node(state: AgentState) -> Dict[str, Any]:
                 if not html_content:
                     print(f"[Property Scraper Agent] Warning: Empty HTML content returned for '{search_url}'")
                     continue
-                    
+
                 # Extract links
                 links = extract_properties_from_html(html_content, portal)
                 print(f"[Property Scraper Agent] Extracted {len(links)} raw property links from {portal}")
-                
+
                 # Take top 5 links per portal search URL
                 portal_scraped_count = 0
                 for link in links:
@@ -188,16 +189,16 @@ def property_scraper_node(state: AgentState) -> Dict[str, Any]:
                     portal_scraped_count += 1
             except Exception as e:
                 print(f"[Property Scraper Agent] Warning: Exception scraping '{search_url}': {e}")
-                
+
     # Cap total scraped results across all portals
     scraped_results = scraped_results[:max_scraped]
-    
+
     # 2. Validation step
     search_urls = [item["url"] for item in validated_urls]
     validated_results = validate_scraped_properties(scraped_results, search_urls, trace)
-    
+
     print(f"[Property Scraper Agent] Completed. Total scraped links: {len(scraped_results)}, Validated: {len(validated_results)}")
-    
+
     # End Langfuse span
     latency_ms = int((time.time() - start_time) * 1000)
     metrics = {
@@ -207,7 +208,7 @@ def property_scraper_node(state: AgentState) -> Dict[str, Any]:
         "urls": [item["url"] for item in scraped_results]
     }
     end_span(span, scraped_results, metrics)
-    
+
     return {
         "scraped_property_urls": scraped_results,
         "validated_property_urls": validated_results

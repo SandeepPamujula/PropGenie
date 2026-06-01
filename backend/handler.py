@@ -1,16 +1,16 @@
 import base64
 import json
-import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from graph import generate_graph_sse
-from utils.rate_limiter import check_rate_limit, RateLimitException, get_next_ist_midnight_string
-from utils.logger import setup_logging, set_request_id
+from utils.logger import set_request_id, setup_logging
+from utils.rate_limiter import RateLimitException, check_rate_limit, get_next_ist_midnight_string
 
 # Configure structured JSON logging on handler load
 setup_logging()
@@ -25,7 +25,7 @@ def lambda_handler(event: dict[str, Any], *args: Any) -> Any:
     # 1. Parse Routing and Path Information
     raw_path = event.get("rawPath") or "/"
     request_context = event.get("requestContext", {})
-    
+
     # Set request ID context variable
     aws_request_id = request_context.get("requestId") or str(uuid.uuid4())
     set_request_id(aws_request_id)
@@ -44,7 +44,7 @@ def lambda_handler(event: dict[str, Any], *args: Any) -> Any:
                 {
                     "status": "healthy",
                     "version": "1.0.0",
-                    "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
                 }
             ),
         }

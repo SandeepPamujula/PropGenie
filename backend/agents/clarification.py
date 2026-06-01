@@ -1,18 +1,19 @@
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 from langchain_aws import ChatBedrock
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+from models.state import AgentState
 from observability.langfuse_tracer import (
+    LLAMA_3_1_70B_INPUT_COST_PER_TOKEN,
+    LLAMA_3_1_70B_OUTPUT_COST_PER_TOKEN,
     create_span,
     end_span,
-    LLAMA_3_1_70B_INPUT_COST_PER_TOKEN,
-    LLAMA_3_1_70B_OUTPUT_COST_PER_TOKEN
 )
-from models.state import AgentState
 
 # System Prompt for the Clarification Agent
 CLARIFICATION_SYSTEM_PROMPT = """You are the Clarification Agent for PropGenie, an advanced AI property search assistant in India.
@@ -46,15 +47,15 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
     import time
     print("[Clarification Agent] Started execution")
     start_time = time.time()
-    
+
     trace = state.get("trace")
     span = create_span(trace, "clarification", state.get("pending_fields", []))
-    
+
     # 2. Check 3-round breach logic (if clarification_round is 3 or more)
     round_count = state.get("clarification_round", 0)
     session_id = state.get("session_id") or ""
     logger.info(f"[CLARIFICATION_ROUND] Clarification round {round_count} for session {session_id}")
-    
+
     if round_count >= 3:
         print(f"[Clarification Agent] 3-round breach detected (round: {round_count}). Applying defaults.")
         updates: dict[str, Any] = {
@@ -62,32 +63,32 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
             "pending_fields": [],
             "search_completed": False
         }
-        
+
         # Apply defaults
         # Budget defaults: budget_min = 0, budget_max = None
         if "budget" in state.get("pending_fields", []) or (state.get("budget_min") is None and state.get("budget_max") is None):
             updates["budget_min"] = 0
             updates["budget_max"] = None
-            
+
         # Radius default: 4 km
         if state.get("radius_km") is None:
             updates["radius_km"] = 4
-            
+
         # BHK default: omit from query (so keep it None/null)
         if "bhk" in state.get("pending_fields", []) or state.get("bhk") is None:
             updates["bhk"] = None
-            
+
         # Add response note explaining defaults were applied
         note = "I've proceeded with your search using default options (unlimited budget and a 4 km search radius) since we've reached the limit of clarification questions."
-        
+
         messages = list(state.get("messages", []))
         messages.append({
             "role": "assistant",
             "content": note,
-            "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            "ts": datetime.now(UTC).isoformat().replace("+00:00", "Z")
         })
         updates["messages"] = messages
-        
+
         # End Langfuse span
         latency_ms = int((time.time() - start_time) * 1000)
         metrics = {
@@ -98,7 +99,7 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
             "cost": 0.0
         }
         end_span(span, note, metrics)
-        
+
         return updates
 
     # 3. Normal clarification question generation
@@ -109,12 +110,12 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
     }
     resolved_str = json.dumps(resolved)
     missing_str = ", ".join(state.get("pending_fields", []))
-    
+
     prompt = CLARIFICATION_SYSTEM_PROMPT.format(
         resolved_fields=resolved_str,
         missing_fields=missing_str
     )
-    
+
     messages_for_llm: list[Any] = [SystemMessage(content=prompt)]
     for msg in state.get("messages", []):
         role = msg.get("role")
@@ -123,12 +124,12 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
             messages_for_llm.append(HumanMessage(content=content))
         elif role == "assistant":
             messages_for_llm.append(AIMessage(content=content))
-            
+
     updates = {
         "proceed_with_defaults": False,
         "search_completed": False
     }
-    
+
     try:
         import os
         model_id = os.environ.get("BEDROCK_MODEL_ID", "us.meta.llama3-1-70b-instruct-v1:0")
@@ -138,21 +139,21 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
             region_name=region_name,
             model_kwargs={"temperature": 0.0}
         )
-        
+
         # Invoke model
         llm_start = time.time()
         response = llm.invoke(messages_for_llm)
         llm_latency = int((time.time() - llm_start) * 1000)
         logger.info(f"[BEDROCK_CALL] Model {model_id} invoked. Latency: {llm_latency}ms")
-        
+
         question = response.content if hasattr(response, "content") else response
         if isinstance(question, list):
             question_text = str(question[0])
         else:
             question_text = str(question).strip()
-            
+
         print(f"[Clarification Agent] LLM question: {question_text}")
-        
+
         # Accumulate usage statistics
         updates["llm_calls"] = state.get("llm_calls", 0) + 1
         if hasattr(response, "response_metadata") and "usage" in response.response_metadata:
@@ -163,28 +164,28 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
             usage = response.usage_metadata
             updates["total_input_tokens"] = state.get("total_input_tokens", 0) + usage.get("input_tokens", 0)
             updates["total_output_tokens"] = state.get("total_output_tokens", 0) + usage.get("output_tokens", 0)
-        
+
     except Exception as e:
         print(f"[Clarification Agent] Error invoking Bedrock LLM: {e}")
         question_text = "Could you please provide more details for your property search, such as city, budget, and BHK?"
         updates["error"] = f"Clarification LLM invocation failed: {str(e)}"
-        
+
     # Append assistant question to messages
     messages = list(state.get("messages", []))
     messages.append({
         "role": "assistant",
         "content": question_text,
-        "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        "ts": datetime.now(UTC).isoformat().replace("+00:00", "Z")
     })
     updates["messages"] = messages
-    
+
     # End Langfuse span
     latency_ms = int((time.time() - start_time) * 1000)
     init_input_tokens = state.get("total_input_tokens", 0)
     init_output_tokens = state.get("total_output_tokens", 0)
     added_input_tokens = updates.get("total_input_tokens", init_input_tokens) - init_input_tokens
     added_output_tokens = updates.get("total_output_tokens", init_output_tokens) - init_output_tokens
-    
+
     metrics = {
         "latency": latency_ms,
         "input_tokens": added_input_tokens,
@@ -192,8 +193,8 @@ def clarification_node(state: AgentState) -> dict[str, Any]:
         "total_tokens": added_input_tokens + added_output_tokens,
         "cost": added_input_tokens * LLAMA_3_1_70B_INPUT_COST_PER_TOKEN + added_output_tokens * LLAMA_3_1_70B_OUTPUT_COST_PER_TOKEN
     }
-    
+
     end_span(span, question_text, metrics)
-    
+
     return updates
 

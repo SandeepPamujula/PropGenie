@@ -1,5 +1,6 @@
-from datetime import datetime, timezone
-from typing import Any, Optional, cast
+from datetime import UTC, datetime
+from typing import Any, cast
+
 from db.connection import get_database
 
 
@@ -8,7 +9,7 @@ def create_session(session_id: str, ip: str) -> dict[str, Any]:
     Initializes a new session document in MongoDB and returns it.
     """
     db = get_database()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     doc = {
         "_id": session_id,
         "ip": ip,
@@ -39,18 +40,18 @@ def create_session(session_id: str, ip: str) -> dict[str, Any]:
     }
     # Use upsert to avoid duplicate errors on concurrent requests or re-runs
     db.sessions.update_one({"_id": session_id}, {"$setOnInsert": doc}, upsert=True)
-    
+
     # Fetch the document to ensure we return it
     ret = db.sessions.find_one({"_id": session_id})
     return cast(dict[str, Any], ret if ret is not None else doc)
 
 
-def get_session(session_id: str) -> Optional[dict[str, Any]]:
+def get_session(session_id: str) -> dict[str, Any] | None:
     """
     Retrieves the existing session document by session_id, or returns None.
     """
     db = get_database()
-    return cast(Optional[dict[str, Any]], db.sessions.find_one({"_id": session_id}))
+    return cast(dict[str, Any] | None, db.sessions.find_one({"_id": session_id}))
 
 
 def update_session(session_id: str, state: Any) -> dict[str, Any]:
@@ -58,7 +59,7 @@ def update_session(session_id: str, state: Any) -> dict[str, Any]:
     Upserts the database document using fields from the AgentState.
     """
     db = get_database()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Prepare context and graph state dictionaries
     context = {
@@ -98,7 +99,7 @@ def update_session(session_id: str, state: Any) -> dict[str, Any]:
     }
 
     db.sessions.update_one({"_id": session_id}, update_doc, upsert=True)
-    
+
     ret = db.sessions.find_one({"_id": session_id})
     if ret is None:
         # Fallback if find fails for some reason

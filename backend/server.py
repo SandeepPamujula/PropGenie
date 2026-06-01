@@ -1,18 +1,19 @@
-import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
-from graph import generate_graph_sse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
-from utils.rate_limiter import check_rate_limit, RateLimitException, get_next_ist_midnight_string
+
+from graph import generate_graph_sse
 from utils.constants import RateLimitConfig
-from utils.logger import setup_logging, request_id_var
+from utils.logger import request_id_var, setup_logging
+from utils.rate_limiter import RateLimitException, check_rate_limit, get_next_ist_midnight_string
 
 # Configure structured JSON logging on startup
 setup_logging()
@@ -68,7 +69,7 @@ async def health() -> dict[str, str]:
     return {
         "status": "healthy",
         "version": "1.0.0",
-        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
     }
 
 

@@ -12,7 +12,10 @@ select = [
     "B",    # flake8-bugbear
     "UP",   # pyupgrade
 ]
-ignore = []
+ignore = [
+    "E402", # Module level import not at top of file (needed for load_dotenv configuration)
+    "E501", # Line too long
+]
 
 # Configure isort
 [tool.ruff.lint.isort]
