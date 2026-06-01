@@ -13,7 +13,7 @@ So that code quality issues are caught before merging to main.
 
 **Tasks:**
 - Create `.github/workflows/ci.yml` triggered on `push` to `feature/*` and PRs to `main`
-- Job 1 — Frontend: setup Node 20, `npm ci`, `npx eslint src/`, `npm test`
+- Job 1 — Frontend: setup Node 20, `npm install`, `npx eslint src/`, `npm test`
 - Job 2 — Backend: setup Python 3.12, install deps, `ruff check backend/`, `pytest backend/tests/`
 - Job 3 — Terraform: `terraform init -backend=false`, `terraform validate`, `terraform plan -var-file=environments/dev.tfvars`
 - All 3 jobs run in parallel

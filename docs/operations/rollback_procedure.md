@@ -71,7 +71,7 @@ If GitHub Actions is experiencing an outage and you need to restore service imme
    ```
 2. Rebuild the frontend static files from the stable commit:
    ```bash
-   npm ci
+   npm install
    npm run build
    ```
 3. Sync the stable files to S3:
