@@ -69,6 +69,7 @@ jobs:
     name: Terraform Validate & Plan
     needs: [frontend, backend]
     runs-on: ubuntu-latest
+    environment: dev
     defaults:
       run:
         working-directory: infra
@@ -79,6 +80,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Create Backend Dist Directory
+        run: mkdir -p ../backend/dist
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

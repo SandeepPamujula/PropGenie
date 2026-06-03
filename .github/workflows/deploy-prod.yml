@@ -78,6 +78,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Prepare Backend Distribution Package
+        run: python backend/scripts/prepare_dist.py
+
       # Step 2: Terraform Workspace Select and Apply (Prod)
       - name: Terraform Apply (Production)
         working-directory: infra
