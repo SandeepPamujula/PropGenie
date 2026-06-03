@@ -1,8 +1,5 @@
 from typing import Any
 
-from agents.orchestrator import orchestrator_node
-from agents.response_formatter import response_formatter_node
-
 
 def test_placeholder_agents() -> None:
     """Verifies that all agent stubs are importable and return state correctly."""

@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 
 export type AgentPhase =
   | 'orchestrator'
@@ -25,26 +25,21 @@ interface NodeConfig {
 
 export function WorkflowGraph({ currentPhase }: WorkflowGraphProps): ReactElement {
   const [visited, setVisited] = useState<string[]>(['restore_state'])
+  const [prevPhase, setPrevPhase] = useState<AgentPhase>(currentPhase)
 
-  useEffect(() => {
+  if (currentPhase !== prevPhase) {
+    setPrevPhase(currentPhase)
     if (currentPhase) {
-      setVisited((prev) => {
-        // Map 'complete' phase to save_state completion
+      if (currentPhase === 'orchestrator') {
+        setVisited(['restore_state', 'orchestrator'])
+      } else {
         const phaseName = currentPhase === 'complete' ? 'save_state' : currentPhase
-        if (!prev.includes(phaseName)) {
-          return [...prev, phaseName]
+        if (!visited.includes(phaseName)) {
+          setVisited((prev) => [...prev, phaseName])
         }
-        return prev
-      })
+      }
     }
-  }, [currentPhase])
-
-  // Reset visited path if starting a new run
-  useEffect(() => {
-    if (currentPhase === 'orchestrator') {
-      setVisited(['restore_state', 'orchestrator'])
-    }
-  }, [currentPhase])
+  }
 
   // Determine status of each node
   const getNodeStatus = (nodeId: string): NodeStatus => {

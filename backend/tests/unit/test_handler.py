@@ -1,5 +1,4 @@
 import json
-from typing import List
 from unittest.mock import patch
 
 from handler import lambda_handler
@@ -9,7 +8,7 @@ class MockResponseStream:
     """Helper class to mock AWS Lambda Response Streaming object."""
 
     def __init__(self) -> None:
-        self.chunks: List[bytes] = []
+        self.chunks: list[bytes] = []
 
     def write(self, data: bytes) -> None:
         self.chunks.append(data)

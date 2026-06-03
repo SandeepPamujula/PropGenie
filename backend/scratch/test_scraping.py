@@ -1,11 +1,11 @@
-import sys
 import os
+import sys
 
 # Adjust path to import backend modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from agents.property_scraper import fetch_url, ALinkExtractor
-from urllib.parse import urlparse
+
+from agents.property_scraper import ALinkExtractor, fetch_url
 
 url = "https://www.nobroker.in/property/plot/bangalore/Indiranagar?price=10000000,100000000&searchParam=W3sibGF0IjoxMi45NzgzNjkyLCJsb24iOjc3LjY0MDgzNTYsInBsYWNlSWQiOiJDaElKa1FOM0dLUVdyanNSTmhCUUpyaEdEN1UiLCJwbGFjZU5hbWUiOiJJbmRpcmFuYWdhciJ9XQ==&radius=4.0&city=bangalore&locality=Indiranagar"
 

@@ -2,8 +2,7 @@ import contextvars
 import hashlib
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
 
 # Context variable to hold the request/session ID globally for current execution context
 request_id_var = contextvars.ContextVar("request_id", default="N/A")
@@ -20,7 +19,7 @@ class JSONFormatter(logging.Formatter):
 
         # Build standard log payload
         log_payload = {
-            "timestamp": datetime.fromtimestamp(record.created, timezone.utc)
+            "timestamp": datetime.fromtimestamp(record.created, UTC)
             .isoformat()
             .replace("+00:00", "Z"),
             "level": level,

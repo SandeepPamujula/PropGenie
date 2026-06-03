@@ -1,8 +1,9 @@
 from typing import Any
 from unittest.mock import MagicMock, patch
-import pytest
+
 from agents.url_validator import url_validator_node
 from models.state import get_initial_state
+
 
 @patch("agents.url_validator.check_liveness")
 def test_url_validator_happy_path(mock_check_liveness: MagicMock) -> None:

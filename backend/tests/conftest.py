@@ -58,8 +58,8 @@ def mock_chat_bedrock() -> Any:
     """
     Autouse fixture to mock ChatBedrock to prevent network calls and return simulated LLM responses.
     """
-    import sys
     import json
+    import sys
     from unittest.mock import MagicMock, patch
 
     with patch("agents.orchestrator.ChatBedrock") as mock_class:

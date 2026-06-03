@@ -60,6 +60,7 @@ export default function Home(): ReactElement {
     try {
       const stream = await sendMessage(textToSubmit)
       let portalResults: PortalResult[] = []
+      let clarificationReceived = false
 
       await consumeSSEStream(stream, (payload) => {
         setIsWaitingForFirstEvent(false)
@@ -75,6 +76,7 @@ export default function Home(): ReactElement {
           }
           case 'clarification': {
             const data = payload.data
+            clarificationReceived = true
             setActiveStatus(null)
             const clarificationMsg: ChatMessage = {
               id: `msg-clarify-${Date.now()}`,
@@ -185,7 +187,7 @@ export default function Home(): ReactElement {
             setIsProcessing(false)
             setActiveStatus(null)
 
-            if (portalResults.length === 0) {
+            if (portalResults.length === 0 && !clarificationReceived) {
               setMessages((prev) => [
                 ...prev,
                 {
