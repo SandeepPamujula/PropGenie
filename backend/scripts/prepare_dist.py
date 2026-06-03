@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 
+
 def prepare():
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dist_dir = os.path.join(backend_dir, "dist")
