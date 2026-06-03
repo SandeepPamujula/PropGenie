@@ -102,4 +102,4 @@ jobs:
 
       - name: Terraform Plan
         if: env.AWS_ACCESS_KEY_ID != ''
-        run: terraform plan -var-file=environments/dev.tfvars
+        run: terraform plan -var-file=environments/dev.tfvars -lock=false
