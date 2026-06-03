@@ -1,10 +1,13 @@
 import json
 import logging
 import os
-from datetime import datetime, timezone
-from typing import Any, Generator
+from collections.abc import Generator
+from datetime import UTC, datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
+from langgraph.graph import END, StateGraph
 
 from agents.clarification import clarification_node
 from agents.orchestrator import orchestrator_node
@@ -12,13 +15,12 @@ from agents.property_scraper import property_scraper_node
 from agents.query_builder import query_builder_node
 from agents.response_formatter import response_formatter_node
 from agents.url_validator import url_validator_node
-from db.session_manager import create_session, get_session, update_session
 from db.search_logger import log_search
-from langgraph.graph import END, StateGraph
+from db.session_manager import create_session, get_session, update_session
 from models.state import AgentState, get_initial_state
-from utils.rate_limiter import increment_rate_limit
-from utils.constants import RateLimitConfig
 from observability.langfuse_tracer import create_trace, flush_traces, update_trace_metadata
+from utils.constants import RateLimitConfig
+from utils.rate_limiter import increment_rate_limit
 
 
 def restore_state(state: AgentState) -> dict[str, Any]:
@@ -89,32 +91,32 @@ def save_state(state: AgentState) -> dict[str, Any]:
     """
     print("[Graph Node] save_state executed")
     session_id = state.get("session_id", "")
-    
+
     # Check if a search was just completed and increment the rate limit
     if state.get("search_completed"):
         ip = state.get("ip", "")
         if ip:
             increment_rate_limit(ip)
-        
+
         # Log custom Search completed marker
         logger.info(f"[SEARCH_COMPLETED] Search completed successfully for session {session_id}.")
-        
+
         # Log the search analytics
         log_search(session_id, ip, state)
-            
+
     if session_id:
         update_session(session_id, state)
-        
+
     # Update Langfuse trace metadata with final stats
     trace = state.get("trace")
     if trace:
         generated = state.get("generated_urls", [])
         validated = state.get("validated_urls", [])
-        
+
         # A hallucination is detected if we generated URLs but all/some failed validation/liveness
         # and got dropped.
         hallucination_detected = len(generated) > len(validated)
-        
+
         metadata = {
             "clarification_rounds": state.get("clarification_round", 0),
             "hallucination_detected": hallucination_detected,
@@ -122,10 +124,10 @@ def save_state(state: AgentState) -> dict[str, Any]:
         tags = ["propgenie"]
         if hallucination_detected:
             tags.append("hallucination_detected")
-            
+
         update_trace_metadata(trace, metadata=metadata, tags=tags)
         flush_traces()
-        
+
     return {"session_id": session_id}
 
 
@@ -216,13 +218,13 @@ def generate_graph_sse(
         'type': 'agent_status',
         'agent': 'orchestrator',
         'message': 'Understanding your search...',
-        'timestamp': datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        'timestamp': datetime.now(UTC).isoformat().replace("+00:00", "Z")
     })}\n\n"
 
     # 2. Compile graph and run
     compiled_graph = create_graph()
     state = get_initial_state(session_id, ip)
-    
+
     # Initialize Langfuse trace
     trace = create_trace(session_id, ip)
     state["trace"] = trace
@@ -232,7 +234,7 @@ def generate_graph_sse(
         {
             "role": "user",
             "content": message,
-            "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "ts": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         }
     )
 
@@ -245,7 +247,7 @@ def generate_graph_sse(
                 final_state = {**final_state, **state_update}
 
                 # Yield status for each active node
-                timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+                timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
                 if node_name == "orchestrator":
                     yield f"event: agent_status\ndata: {json.dumps({
                         'type': 'agent_status',
@@ -345,11 +347,11 @@ def generate_graph_sse(
                 defaults.append("radius_km: 4")
             if final_state.get("budget_min") == 0:
                 defaults.append("budget_min: 0")
-                
+
             validated_props = final_state.get("validated_property_urls", []) or []
             enable_scraping = os.environ.get("ENABLE_PROPERTY_SCRAPING", "false").lower() == "true"
             property_links_count = len(validated_props) if enable_scraping else 0
-            
+
             search_meta = {
                 'type': 'search_meta',
                 'portals_searched': len(generated),
@@ -359,7 +361,7 @@ def generate_graph_sse(
                 'clarification_rounds': final_state.get('clarification_round', 0),
                 'defaults_applied': defaults
             }
-        
+
         yield f"event: search_meta\ndata: {json.dumps(search_meta)}\n\n"
 
         # Get actual search count from database dynamically

@@ -1,10 +1,10 @@
 import json
-from typing import Any
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
-import pytest
+
 from agents.query_builder import query_builder_node
 from models.state import get_initial_state
+
 
 @patch("agents.query_builder.ChatBedrock")
 def test_query_builder_happy_path_bangalore(mock_chat_bedrock: MagicMock) -> None:
@@ -55,7 +55,7 @@ def test_query_builder_happy_path_bangalore(mock_chat_bedrock: MagicMock) -> Non
     assert query_nb["city"] == ["bangalore"]
     assert query_nb["locality"] == ["Indiranagar"]
     assert "searchParam" in query_nb
-    
+
     # Verify searchParam decoded JSON structure
     import base64
     search_param_val = query_nb["searchParam"][0]
@@ -196,7 +196,7 @@ def test_query_builder_plot_property_type(mock_chat_bedrock: MagicMock) -> None:
     parsed_nb = urlparse(nb_url)
     assert parsed_nb.path == "/property/plot/bangalore/Indiranagar"
     query_nb = parse_qs(parsed_nb.query)
-    
+
     # Assert filters
     assert "type" not in query_nb  # BHK should not be in the query
     assert "buildingType" not in query_nb  # buildingType should not be in the query
@@ -245,7 +245,7 @@ def test_query_builder_buy_house_property_type(mock_chat_bedrock: MagicMock) -> 
     parsed_nb = urlparse(nb_url)
     assert parsed_nb.path == "/property/sale/bangalore/Indiranagar"
     query_nb = parse_qs(parsed_nb.query)
-    
+
     assert query_nb["type"] == ["BHK3"]
     assert query_nb["price"] == ["10000000,30000000"]
     assert query_nb["propertyType"] == ["independent-house"]

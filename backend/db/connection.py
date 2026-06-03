@@ -1,5 +1,6 @@
 import os
 from typing import Any
+
 from pymongo import MongoClient
 
 _client: Any = None
@@ -20,10 +21,10 @@ def get_db_client() -> Any:
     if _client is None:
         mongo_uri = os.environ.get("MONGODB_URI", "mongodb://localhost:27017/propgenie")
         max_pool_size = int(os.environ.get("MONGODB_MAX_POOL_SIZE", "50"))
-        
+
         # We pass maxPoolSize for connection pooling
         _client = MongoClient(mongo_uri, maxPoolSize=max_pool_size)
-        
+
     return _client
 
 
@@ -70,12 +71,12 @@ def init_indexes(db: Any) -> None:
     db.sessions.create_index("last_active", expireAfterSeconds=1800)
     # Create regular index on ip
     db.sessions.create_index("ip")
-    
+
     # Create compound unique index for rate limits
     db.rate_limits.create_index([("ip", 1), ("date", 1)], unique=True)
     # Create TTL index for automatic cleanup of rate limits
     db.rate_limits.create_index("expires_at", expireAfterSeconds=0)
-    
+
     # Create indexes for search analytics
     db.search_logs.create_index("timestamp")
     db.search_logs.create_index("city")

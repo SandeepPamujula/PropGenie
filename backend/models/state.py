@@ -1,4 +1,4 @@
-from typing import Any, Optional, TypedDict
+from typing import Any, TypedDict
 
 
 class AgentState(TypedDict):
@@ -10,14 +10,14 @@ class AgentState(TypedDict):
 
     session_id: str
     ip: str
-    intent: Optional[str]
-    city: Optional[str]
-    location_anchor: Optional[str]
-    property_type: Optional[str]
-    bhk: Optional[int]
-    budget_min: Optional[int]
-    budget_max: Optional[int]
-    radius_km: Optional[int]
+    intent: str | None
+    city: str | None
+    location_anchor: str | None
+    property_type: str | None
+    bhk: int | None
+    budget_min: int | None
+    budget_max: int | None
+    radius_km: int | None
     clarification_round: int
     pending_fields: list[str]
     messages: list[dict[str, Any]]
@@ -25,15 +25,15 @@ class AgentState(TypedDict):
     validated_urls: list[dict[str, Any]]
     scraped_property_urls: list[dict[str, Any]]
     validated_property_urls: list[dict[str, Any]]
-    search_meta: Optional[dict[str, Any]]
-    error: Optional[str]
-    proceed_with_defaults: Optional[bool]
-    search_completed: Optional[bool]
-    start_time: Optional[float]
+    search_meta: dict[str, Any] | None
+    error: str | None
+    proceed_with_defaults: bool | None
+    search_completed: bool | None
+    start_time: float | None
     llm_calls: int
     total_input_tokens: int
     total_output_tokens: int
-    trace: Optional[Any]
+    trace: Any | None
 
 
 def get_initial_state(session_id: str, ip: str) -> AgentState:

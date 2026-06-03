@@ -13,7 +13,7 @@ So that code quality issues are caught before merging to main.
 
 **Tasks:**
 - Create `.github/workflows/ci.yml` triggered on `push` to `feature/*` and PRs to `main`
-- Job 1 — Frontend: setup Node 20, `npm ci`, `npx eslint src/`, `npm test`
+- Job 1 — Frontend: setup Node 20, `npm install`, `npx eslint src/`, `npm test`
 - Job 2 — Backend: setup Python 3.12, install deps, `ruff check backend/`, `pytest backend/tests/`
 - Job 3 — Terraform: `terraform init -backend=false`, `terraform validate`, `terraform plan -var-file=environments/dev.tfvars`
 - All 3 jobs run in parallel
@@ -25,7 +25,7 @@ So that code quality issues are caught before merging to main.
 - Completes in under 5 minutes for a clean run
 - README badge reflects current CI status
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -51,7 +51,7 @@ So that the latest code is always live in dev for testing.
 - All secrets from GitHub Actions secrets (never hardcoded)
 - Completes in under 10 minutes
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -75,7 +75,7 @@ So that production releases are deliberate and auditable.
 - Smoke test confirms prod health endpoint returns 200
 - Deployment metadata is logged
 
-**Status:** Not Started
+**Status:** Completed
 
 ---
 
@@ -100,4 +100,4 @@ So that no secrets are hardcoded or visible in logs.
 - `.env.example` documents all required environment variables
 - README documents required secrets and setup procedure
 
-**Status:** Not Started
+**Status:** Completed

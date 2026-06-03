@@ -1,10 +1,8 @@
-import json
-from datetime import datetime
-from typing import Any
 from unittest.mock import MagicMock, patch
-import pytest
+
 from agents.clarification import clarification_node
 from models.state import get_initial_state
+
 
 @patch("agents.clarification.ChatBedrock")
 def test_clarification_one_question_per_turn(mock_chat_bedrock: MagicMock) -> None:
@@ -57,7 +55,7 @@ def test_clarification_prioritized_question(mock_chat_bedrock: MagicMock) -> Non
     state["clarification_round"] = 1
 
     updates = clarification_node(state)
-    
+
     assert updates["proceed_with_defaults"] is False
     assert updates["messages"][-1]["content"] == "Are you looking to buy or rent a property in Bangalore?"
 
@@ -90,7 +88,7 @@ def test_clarification_three_round_breach() -> None:
     assert updates["radius_km"] == 4
     assert updates["bhk"] is None
     assert updates["pending_fields"] == []
-    
+
     # Check that user-facing note was added
     assert len(updates["messages"]) == original_message_count + 1
     assert updates["messages"][-1]["role"] == "assistant"

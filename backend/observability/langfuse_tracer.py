@@ -1,9 +1,9 @@
-import os
-import time
 import logging
-from typing import Any, Optional, Dict
+import os
+from typing import Any
+
 from langfuse import Langfuse
-from langfuse.client import StatefulTraceClient, StatefulSpanClient
+from langfuse.client import StatefulSpanClient, StatefulTraceClient
 
 # AWS Bedrock Pricing for Llama 3.1 70B Instruct (USD per token)
 LLAMA_3_1_70B_INPUT_COST_PER_TOKEN = 0.00265 / 1000
@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 # Initialize Langfuse client from env variables
 # Caught errors or missing keys should disable tracing gracefully without crashing the pipeline
-langfuse_client: Optional[Langfuse] = None
+langfuse_client: Langfuse | None = None
 
 try:
     public_key = os.environ.get("LANGFUSE_PUBLIC_KEY")
     secret_key = os.environ.get("LANGFUSE_SECRET_KEY")
     host = os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com")
-    
+
     if public_key and secret_key:
         langfuse_client = Langfuse(
             public_key=public_key,
@@ -32,7 +32,7 @@ except Exception as e:
     logger.error(f"Failed to initialize Langfuse client: {e}")
     langfuse_client = None
 
-def create_trace(session_id: str, ip: Optional[str] = None) -> Optional[StatefulTraceClient]:
+def create_trace(session_id: str, ip: str | None = None) -> StatefulTraceClient | None:
     """
     Creates a Langfuse trace tied to the session.
     """
@@ -49,7 +49,7 @@ def create_trace(session_id: str, ip: Optional[str] = None) -> Optional[Stateful
         logger.error(f"Error creating Langfuse trace: {e}")
         return None
 
-def create_span(trace: Optional[StatefulTraceClient], agent_name: str, input_data: Any) -> Optional[StatefulSpanClient]:
+def create_span(trace: StatefulTraceClient | None, agent_name: str, input_data: Any) -> StatefulSpanClient | None:
     """
     Creates a span for an agent node under the given trace.
     """
@@ -65,9 +65,9 @@ def create_span(trace: Optional[StatefulTraceClient], agent_name: str, input_dat
         return None
 
 def end_span(
-    span: Optional[StatefulSpanClient], 
-    output_data: Any, 
-    metrics: Optional[Dict[str, Any]] = None
+    span: StatefulSpanClient | None,
+    output_data: Any,
+    metrics: dict[str, Any] | None = None
 ) -> None:
     """
     Ends a span and records latency, token counts, cost estimate.
@@ -93,7 +93,7 @@ def end_span(
             for k, v in metrics.items():
                 if k not in ["latency", "input_tokens", "output_tokens", "total_tokens", "cost", "hallucination_detected"]:
                     metadata[k] = v
-                    
+
         span.end(
             output=output_data,
             metadata=metadata
@@ -102,9 +102,9 @@ def end_span(
         logger.error(f"Error ending Langfuse span: {e}")
 
 def update_trace_metadata(
-    trace: Optional[StatefulTraceClient], 
-    metadata: Dict[str, Any], 
-    tags: Optional[list[str]] = None
+    trace: StatefulTraceClient | None,
+    metadata: dict[str, Any],
+    tags: list[str] | None = None
 ) -> None:
     """
     Updates trace level metadata and tags.

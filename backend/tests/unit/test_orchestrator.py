@@ -1,21 +1,24 @@
 import json
 from typing import Any
 from unittest.mock import MagicMock, patch
+
 import pytest
-from agents.orchestrator import orchestrator_node, extract_json
+
+from agents.orchestrator import extract_json, orchestrator_node
 from models.state import get_initial_state
+
 
 def test_extract_json() -> None:
     """Verifies that the JSON extraction utility parses various LLM output formats."""
     # Plain JSON
     assert extract_json('{"key": "value"}') == {"key": "value"}
-    
+
     # Markdown block
     assert extract_json('```json\n{"key": "value"}\n```') == {"key": "value"}
-    
+
     # Whitespace and backticks
     assert extract_json(' ```\n{"key": "value"}\n``` ') == {"key": "value"}
-    
+
     # Leading text
     assert extract_json('Here is the JSON:\n{"key": "value"}') == {"key": "value"}
 
@@ -99,7 +102,7 @@ def test_orchestrator_ambiguous_intent_path(mock_chat_bedrock: MagicMock) -> Non
     assert updates["bhk"] is None
     assert updates["budget_min"] is None
     assert updates["budget_max"] is None
-    
+
     # Must include "intent", "budget", "bhk"
     assert "intent" in updates["pending_fields"]
     assert "budget" in updates["pending_fields"]

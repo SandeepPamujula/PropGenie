@@ -1,4 +1,3 @@
-from typing import Any
 
 from graph import create_graph
 from models.state import get_initial_state
