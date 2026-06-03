@@ -83,8 +83,7 @@ resource "aws_cloudfront_origin_request_policy" "lambda_policy" {
         "CloudFront-Viewer-Address",
         "X-Session-ID",
         "Content-Type",
-        "Accept",
-        "Authorization"
+        "Accept"
       ]
     }
   }
@@ -210,4 +209,13 @@ resource "aws_lambda_permission" "allow_cloudfront" {
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.distribution.arn
   function_url_auth_type = "AWS_IAM"
+}
+
+# Grant CloudFront OAC permission to invoke the Lambda Function directly (sometimes required by OAC)
+resource "aws_lambda_permission" "allow_cloudfront_invoke" {
+  statement_id  = "AllowCloudFrontInvokeFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = var.agent_function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.distribution.arn
 }

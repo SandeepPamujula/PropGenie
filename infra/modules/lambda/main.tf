@@ -11,15 +11,49 @@ terraform {
   }
 }
 
-# Create a dummy zip file for bootstrapping the Lambda function
-data "archive_file" "dummy" {
-  type        = "zip"
-  output_path = "${path.module}/dummy_lambda.zip"
-
-  source {
-    content  = "def lambda_handler(event, context):\n    return {'statusCode': 200, 'body': 'Bootstrap'}"
-    filename = "handler.py"
+# 1. Install dependencies to a build directory (run only when requirements.txt changes)
+resource "null_resource" "lambda_dependencies" {
+  triggers = {
+    requirements = filesha256("${path.root}/../backend/requirements.txt")
   }
+
+  provisioner "local-exec" {
+    working_dir = "${path.root}/.."
+    command     = "pip install -r backend/requirements.txt --platform manylinux2014_x86_64 --only-binary=:all: --python-version 3.12 -t backend/dist"
+    interpreter = ["powershell", "-Command"]
+  }
+}
+
+# 2. Copy code files to the build directory before archiving (always run to capture code changes)
+resource "null_resource" "copy_lambda_code" {
+  triggers = {
+    always_run = timestamp()
+  }
+
+  depends_on = [null_resource.lambda_dependencies]
+
+  provisioner "local-exec" {
+    working_dir = "${path.root}/.."
+    command     = "Copy-Item -Path backend/handler.py, backend/graph.py -Destination backend/dist/ -Force; Copy-Item -Path backend/agents, backend/db, backend/models, backend/observability, backend/portal_configs, backend/utils -Destination backend/dist/ -Recurse -Force"
+    interpreter = ["powershell", "-Command"]
+  }
+}
+
+# 3. Archive the build directory containing code and dependencies
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  output_path = "${path.module}/lambda_backend.zip"
+  source_dir  = "${path.root}/../backend/dist"
+
+  depends_on = [null_resource.copy_lambda_code]
+}
+
+# 4. Upload zip to S3 (since the package exceeds AWS Lambda direct upload size limits)
+resource "aws_s3_object" "lambda_zip_upload" {
+  bucket = "propgenie-terraform-state"
+  key    = "lambda_packages/lambda_backend_${var.environment}.zip"
+  source = data.archive_file.lambda_zip.output_path
+  etag   = data.archive_file.lambda_zip.output_md5
 }
 
 # IAM Execution Role for Lambda
@@ -89,8 +123,9 @@ resource "aws_lambda_function" "agent" {
   timeout                        = var.lambda_timeout
   reserved_concurrent_executions = var.reserved_concurrent_executions
 
-  filename         = data.archive_file.dummy.output_path
-  source_code_hash = data.archive_file.dummy.output_base64sha256
+  s3_bucket        = aws_s3_object.lambda_zip_upload.bucket
+  s3_key           = aws_s3_object.lambda_zip_upload.key
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
   environment {
     variables = {
@@ -104,11 +139,8 @@ resource "aws_lambda_function" "agent" {
   }
 
   lifecycle {
-    # Ignore changes to code zip updated in CI/CD deployment
-    ignore_changes = [
-      filename,
-      source_code_hash
-    ]
+    # Allow Terraform to update the Lambda when the code zip changes
+    ignore_changes = []
   }
 }
 
