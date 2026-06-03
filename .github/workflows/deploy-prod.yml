@@ -91,17 +91,7 @@ jobs:
             -var="langfuse_public_key=${{ secrets.LANGFUSE_PUBLIC_KEY }}" \
             -var="langfuse_base_url=${{ secrets.LANGFUSE_BASE_URL }}"
 
-      # Step 3: Package Lambda and deploy
-      - name: Package Lambda Function
-        working-directory: backend
-        run: |
-          mkdir -p dist
-          pip install -r requirements.txt --platform manylinux2014_x86_64 --only-binary=:all: -t dist/
-          cp -r agents db models observability portal_configs utils graph.py handler.py dist/
-          cd dist
-          zip -r ../lambda.zip .
-          cd ..
-          aws lambda update-function-code --function-name propgenie-agent-prod --zip-file fileb://lambda.zip
+
 
       # Step 4: Build & Sync Frontend
       - name: Deploy Frontend to S3 & CloudFront Invalidation

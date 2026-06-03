@@ -11,49 +11,34 @@ terraform {
   }
 }
 
-# 1. Install dependencies to a build directory (run only when requirements.txt changes)
-resource "null_resource" "lambda_dependencies" {
+# 1. Prepare backend dist directory using python script (runs cross-platform)
+resource "null_resource" "prepare_backend_dist" {
   triggers = {
     requirements = filesha256("${path.root}/../backend/requirements.txt")
+    always_run   = timestamp()
   }
 
   provisioner "local-exec" {
     working_dir = "${path.root}/.."
-    command     = "pip install -r backend/requirements.txt --platform manylinux2014_x86_64 --only-binary=:all: --python-version 3.12 -t backend/dist"
-    interpreter = ["powershell", "-Command"]
+    command     = "python backend/scripts/prepare_dist.py"
   }
 }
 
-# 2. Copy code files to the build directory before archiving (always run to capture code changes)
-resource "null_resource" "copy_lambda_code" {
-  triggers = {
-    always_run = timestamp()
-  }
-
-  depends_on = [null_resource.lambda_dependencies]
-
-  provisioner "local-exec" {
-    working_dir = "${path.root}/.."
-    command     = "Copy-Item -Path backend/handler.py, backend/graph.py -Destination backend/dist/ -Force; Copy-Item -Path backend/agents, backend/db, backend/models, backend/observability, backend/portal_configs, backend/utils -Destination backend/dist/ -Recurse -Force"
-    interpreter = ["powershell", "-Command"]
-  }
-}
-
-# 3. Archive the build directory containing code and dependencies
+# 2. Archive the prepared build directory containing code and dependencies (deferred to apply phase)
 data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "${path.module}/lambda_backend.zip"
   source_dir  = "${path.root}/../backend/dist"
 
-  depends_on = [null_resource.copy_lambda_code]
+  depends_on = [null_resource.prepare_backend_dist]
 }
 
-# 4. Upload zip to S3 (since the package exceeds AWS Lambda direct upload size limits)
+# 3. Upload zip to S3 (since the package exceeds AWS Lambda direct upload size limits)
 resource "aws_s3_object" "lambda_zip_upload" {
-  bucket = "propgenie-terraform-state"
-  key    = "lambda_packages/lambda_backend_${var.environment}.zip"
-  source = data.archive_file.lambda_zip.output_path
-  etag   = data.archive_file.lambda_zip.output_md5
+  bucket     = "propgenie-terraform-state"
+  key        = "lambda_packages/lambda_backend_${var.environment}.zip"
+  source     = data.archive_file.lambda_zip.output_path
+  etag       = data.archive_file.lambda_zip.output_md5
 }
 
 # IAM Execution Role for Lambda
