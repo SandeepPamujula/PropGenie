@@ -74,7 +74,9 @@ resource "aws_iam_policy" "lambda_policy" {
           "bedrock:InvokeModelWithResponseStream"
         ]
         Resource = [
-          "arn:aws:bedrock:*::foundation-model/meta.llama3-1-70b-instruct-*"
+          "arn:aws:bedrock:*::foundation-model/meta.llama3-1-70b-instruct-*",
+          "arn:aws:bedrock:*::foundation-model/us.meta.llama3-1-70b-instruct-*",
+          "arn:aws:bedrock:*:*:inference-profile/us.meta.llama3-1-70b-instruct-*"
         ]
       },
       {

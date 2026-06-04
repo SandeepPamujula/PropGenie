@@ -83,7 +83,8 @@ resource "aws_cloudfront_origin_request_policy" "lambda_policy" {
         "CloudFront-Viewer-Address",
         "X-Session-ID",
         "Content-Type",
-        "Accept"
+        "Accept",
+        "x-amz-content-sha256"
       ]
     }
   }
