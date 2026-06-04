@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import crypto from 'crypto'
 import { ReadableStream } from 'stream/web'
 import { TextEncoder, TextDecoder } from 'util'
 
@@ -14,7 +15,7 @@ if (typeof global.ReadableStream === 'undefined') {
   global.ReadableStream = ReadableStream as any
 }
 
-import crypto from 'crypto'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const webCrypto = (crypto.webcrypto || crypto) as any
 Object.defineProperty(global, 'crypto', {
   value: webCrypto,
