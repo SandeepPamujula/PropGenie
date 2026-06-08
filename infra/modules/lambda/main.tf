@@ -133,10 +133,10 @@ resource "aws_lambda_function" "agent" {
   }
 }
 
-# Configure Lambda Function URL with AWS_IAM auth type and RESPONSE_STREAM mode
+# Configure Lambda Function URL with AWS_IAM auth type and BUFFERED mode
 resource "aws_lambda_function_url" "agent_url" {
   function_name      = aws_lambda_function.agent.function_name
   authorization_type = "AWS_IAM"
-  invoke_mode        = "RESPONSE_STREAM"
+  invoke_mode        = "BUFFERED"
 }
 
