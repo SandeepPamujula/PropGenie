@@ -197,11 +197,10 @@ def orchestrator_node(state: AgentState) -> dict[str, Any]:
         # Extract extracted parameters from LLM response
         extracted = extract_json(response_text)
 
-        # Update state fields with non-null values extracted
+        # Update state fields with values extracted from LLM response (which evaluates full conversation history)
         for key in ["intent", "city", "location_anchor", "property_type", "bhk", "budget_min", "budget_max", "radius_km"]:
-            val = extracted.get(key)
-            if val is not None:
-                updates[key] = val
+            if key in extracted:
+                updates[key] = extracted[key]
             else:
                 updates[key] = state.get(key)
 
@@ -211,6 +210,10 @@ def orchestrator_node(state: AgentState) -> dict[str, Any]:
         for key in ["intent", "city", "location_anchor", "property_type", "bhk", "budget_min", "budget_max", "radius_km"]:
             updates[key] = state.get(key)
         updates["error"] = f"Orchestrator LLM invocation failed: {str(e)}"
+
+    # Safeguard: Plots/land searches cannot have a BHK
+    if updates.get("property_type") == "plot":
+        updates["bhk"] = None
 
     # 4. Perform completeness check against required fields matrix (buy vs rent)
     pending_fields = []
