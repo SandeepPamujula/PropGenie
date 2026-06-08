@@ -18,3 +18,18 @@ variable "price_class" {
   default     = "PriceClass_100"
   description = "The price class for the CloudFront distribution (e.g., PriceClass_100, PriceClass_200, PriceClass_All)"
 }
+
+variable "use_custom_domain" {
+  type        = bool
+  description = "Whether to provision Route 53 and ACM custom domain settings"
+}
+
+variable "custom_domain" {
+  type        = string
+  description = "The custom domain for the frontend (e.g. dev.spworks.click)"
+}
+
+variable "hosted_zone_name" {
+  type        = string
+  description = "The Route 53 hosted zone name (e.g. spworks.click)"
+}

@@ -10,5 +10,9 @@ langfuse_base_url               = "https://cloud.langfuse.com"
 cloudfront_price_class          = "PriceClass_200"
 alarm_email                     = "dev-alerts@propgenie.com"
 
+use_custom_domain               = true
+custom_domain                   = "dev.spworks.click"
+hosted_zone_name                = "spworks.click"
+
 
 

@@ -109,3 +109,27 @@ So that a single `terraform apply` provisions the entire stack.
 - All module outputs are properly wired
 
 **Status:** Completed
+
+---
+
+## US-3.5 — Route 53 Custom Domain Integration (Dev)
+
+**User Story:**
+As a **DevOps engineer**,
+I want the Dev CloudFront distribution linked with our existing Route 53 hosted zone for `spworks.click`,
+So that the development environment is accessible via a custom subdomain (e.g., `dev.spworks.click`) with a valid SSL certificate.
+
+**Tasks:**
+- Reference the existing Route 53 hosted zone for `spworks.click` in Terraform (using `aws_route53_zone` data source)
+- Request and validate an ACM certificate for `dev.spworks.click` in the `us-east-1` region (required for CloudFront) using DNS validation
+- Update the frontend CloudFront distribution to include `dev.spworks.click` as an alias and associate the ACM certificate
+- Create a Route 53 A-alias record pointing `dev.spworks.click` to the CloudFront distribution
+- Update environment variables and configurations (e.g., CORS, callback URLs) to support the new custom domain
+
+**Acceptance Criteria:**
+- ACM certificate is created in `us-east-1` and successfully validated via Route 53 DNS records
+- CloudFront distribution configuration includes the `dev.spworks.click` alias and the certificate
+- Route 53 DNS record resolves `dev.spworks.click` directly to the CloudFront distribution
+- Accessing `https://dev.spworks.click/` loads the application over HTTPS without security warnings
+
+**Status:** Completed

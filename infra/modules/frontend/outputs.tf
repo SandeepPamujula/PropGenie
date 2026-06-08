@@ -12,3 +12,8 @@ output "distribution_id" {
   value       = aws_cloudfront_distribution.distribution.id
   description = "The ID of the CloudFront distribution"
 }
+
+output "custom_domain" {
+  value       = var.use_custom_domain ? var.custom_domain : ""
+  description = "The custom domain configured for the frontend"
+}

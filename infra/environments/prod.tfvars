@@ -10,5 +10,9 @@ langfuse_base_url               = "https://cloud.langfuse.com"
 cloudfront_price_class          = "PriceClass_All"
 alarm_email                     = "prod-alerts@propgenie.com"
 
+use_custom_domain               = false
+custom_domain                   = ""
+hosted_zone_name                = ""
+
 
 

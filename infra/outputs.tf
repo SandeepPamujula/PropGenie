@@ -51,5 +51,10 @@ output "alarm_topic_arn" {
   description = "The ARN of the SNS topic for alarm notifications"
 }
 
+output "custom_domain" {
+  value       = module.frontend.custom_domain
+  description = "The custom domain name of the CloudFront distribution"
+}
+
 
 

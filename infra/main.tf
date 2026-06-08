@@ -33,6 +33,19 @@ provider "aws" {
   }
 }
 
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = {
+      Project     = var.project_name
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
 module "lambda" {
   source = "./modules/lambda"
 
@@ -53,6 +66,14 @@ module "frontend" {
   agent_function_url  = module.lambda.agent_function_url
   agent_function_name = module.lambda.agent_function_name
   price_class         = var.cloudfront_price_class
+  use_custom_domain   = var.use_custom_domain
+  custom_domain       = var.custom_domain
+  hosted_zone_name    = var.hosted_zone_name
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
 }
 
 module "monitoring" {
