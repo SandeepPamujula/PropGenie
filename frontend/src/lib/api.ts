@@ -1,8 +1,25 @@
 import { getSessionId, resetSessionId } from './session'
 
 const isDev = process.env.NODE_ENV === 'development'
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || (isDev ? 'http://localhost:8000' : '')
+
+const getApiBaseUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')
+
+    if (!isLocalHost) {
+      // Remote deployment (e.g. CloudFront/S3) should always use relative paths
+      // so CloudFront handles Origin routing to the Lambda function.
+      return ''
+    }
+  }
+
+  return envUrl || (isDev ? 'http://localhost:8000' : '')
+}
+
+export const API_BASE_URL = getApiBaseUrl()
 
 export class SessionExpiredError extends Error {
   constructor(message = 'Session has expired') {
