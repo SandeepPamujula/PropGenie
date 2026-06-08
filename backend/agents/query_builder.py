@@ -152,7 +152,7 @@ def query_builder_node(state: AgentState) -> dict[str, Any]:
             # Initialize Bedrock Client
             import os
             model_id = os.environ.get("BEDROCK_MODEL_ID", "us.meta.llama3-1-70b-instruct-v1:0")
-            region_name = os.environ.get("AWS_REGION", "us-east-1")
+            region_name = os.environ.get("BEDROCK_REGION", "us-east-1")
             llm = ChatBedrock(  # type: ignore[call-arg]
                 model_id=model_id,
                 region_name=region_name,

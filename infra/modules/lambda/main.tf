@@ -122,6 +122,8 @@ resource "aws_lambda_function" "agent" {
       LANGFUSE_BASE_URL   = var.langfuse_base_url
       LANGFUSE_HOST       = var.langfuse_base_url
       ENVIRONMENT         = var.environment
+      BEDROCK_REGION      = "us-east-1"
+      BEDROCK_MODEL_ID    = "us.meta.llama3-1-70b-instruct-v1:0"
     }
   }
 
