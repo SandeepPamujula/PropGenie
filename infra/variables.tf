@@ -66,5 +66,23 @@ variable "alarm_email" {
   description = "The email address to receive CloudWatch alarms"
 }
 
+variable "use_custom_domain" {
+  type        = bool
+  default     = false
+  description = "Whether to provision Route 53 and ACM custom domain settings"
+}
+
+variable "custom_domain" {
+  type        = string
+  default     = ""
+  description = "The custom domain for the frontend (e.g. dev.spworks.click)"
+}
+
+variable "hosted_zone_name" {
+  type        = string
+  default     = ""
+  description = "The Route 53 hosted zone name (e.g. spworks.click)"
+}
+
 
 

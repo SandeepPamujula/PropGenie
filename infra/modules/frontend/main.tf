@@ -1,10 +1,45 @@
 terraform {
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
+      source                = "hashicorp/aws"
+      version               = "~> 5.0"
+      configuration_aliases = [aws.us_east_1]
     }
   }
+}
+
+# Route 53 and ACM Certificate Setup (Only if use_custom_domain is true)
+data "aws_route53_zone" "selected" {
+  count        = var.use_custom_domain ? 1 : 0
+  name         = var.hosted_zone_name
+  private_zone = false
+}
+
+resource "aws_acm_certificate" "cert" {
+  provider          = aws.us_east_1
+  count             = var.use_custom_domain ? 1 : 0
+  domain_name       = var.custom_domain
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "cert_validation" {
+  count   = var.use_custom_domain ? 1 : 0
+  name    = tolist(aws_acm_certificate.cert[0].domain_validation_options)[0].resource_record_name
+  type    = tolist(aws_acm_certificate.cert[0].domain_validation_options)[0].resource_record_type
+  zone_id = data.aws_route53_zone.selected[0].zone_id
+  records = [tolist(aws_acm_certificate.cert[0].domain_validation_options)[0].resource_record_value]
+  ttl     = 60
+}
+
+resource "aws_acm_certificate_validation" "cert" {
+  provider                = aws.us_east_1
+  count                   = var.use_custom_domain ? 1 : 0
+  certificate_arn         = aws_acm_certificate.cert[0].arn
+  validation_record_fqdns = [aws_route53_record.cert_validation[0].fqdn]
 }
 
 # 1. S3 Bucket for static assets hosting
@@ -99,6 +134,7 @@ resource "aws_cloudfront_distribution" "distribution" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
   price_class         = var.price_class
+  aliases             = var.use_custom_domain ? [var.custom_domain] : []
 
   # S3 static assets origin
   origin {
@@ -172,7 +208,10 @@ resource "aws_cloudfront_distribution" "distribution" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = var.use_custom_domain ? false : true
+    acm_certificate_arn            = var.use_custom_domain ? aws_acm_certificate_validation.cert[0].certificate_arn : null
+    ssl_support_method             = var.use_custom_domain ? "sni-only" : null
+    minimum_protocol_version       = var.use_custom_domain ? "TLSv1.2_2021" : "TLSv1"
   }
 }
 
@@ -218,4 +257,18 @@ resource "aws_lambda_permission" "allow_cloudfront_invoke" {
   function_name = var.agent_function_name
   principal     = "cloudfront.amazonaws.com"
   source_arn    = aws_cloudfront_distribution.distribution.arn
+}
+
+# 7. Create Route 53 A-record pointing to CloudFront Distribution (Only if use_custom_domain is true)
+resource "aws_route53_record" "apex" {
+  count   = var.use_custom_domain ? 1 : 0
+  zone_id = data.aws_route53_zone.selected[0].zone_id
+  name    = var.custom_domain
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.distribution.hosted_zone_id
+    evaluate_target_health = false
+  }
 }

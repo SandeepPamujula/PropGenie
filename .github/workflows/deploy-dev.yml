@@ -112,8 +112,15 @@ jobs:
       - name: Smoke Test (Health Endpoint)
         run: |
           cd infra
-          CF_DOMAIN=$(terraform output -raw cloudfront_domain)
-          echo "Smoke test targeting: https://$CF_DOMAIN/api/health"
+          # Prefer the custom domain (e.g. dev.spworks.click) when configured;
+          # fall back to the raw CloudFront domain if custom domains are disabled.
+          CUSTOM_DOMAIN=$(terraform output -raw custom_domain 2>/dev/null || echo "")
+          if [ -n "$CUSTOM_DOMAIN" ]; then
+            SMOKE_HOST="$CUSTOM_DOMAIN"
+          else
+            SMOKE_HOST=$(terraform output -raw cloudfront_domain)
+          fi
+          echo "Smoke test targeting: https://$SMOKE_HOST/api/health"
 
           # Wait 15 seconds for initial cache invalidation propagation
           sleep 15
@@ -121,7 +128,7 @@ jobs:
           # Poll the health endpoint (up to 12 attempts, every 10 seconds)
           for i in {1..12}; do
             echo "Attempt $i to fetch health status..."
-            if curl -f -s "https://$CF_DOMAIN/api/health"; then
+            if curl -f -s "https://$SMOKE_HOST/api/health"; then
               echo "Smoke test passed successfully!"
               exit 0
             else
