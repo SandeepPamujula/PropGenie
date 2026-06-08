@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+      - feature/deploy
 
 jobs:
   deploy:
     name: Deploy to Dev
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -70,6 +72,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Prepare Backend Distribution Package
+        run: python backend/scripts/prepare_dist.py
+
       # Step 2: Terraform Workspace Select and Apply
       - name: Terraform Apply (Dev)
         working-directory: infra
@@ -83,17 +88,7 @@ jobs:
             -var="langfuse_public_key=${{ secrets.LANGFUSE_PUBLIC_KEY }}" \
             -var="langfuse_base_url=${{ secrets.LANGFUSE_BASE_URL }}"
 
-      # Step 3: Package Lambda and deploy
-      - name: Package Lambda Function
-        working-directory: backend
-        run: |
-          mkdir -p dist
-          pip install -r requirements.txt --platform manylinux2014_x86_64 --only-binary=:all: -t dist/
-          cp -r agents db models observability portal_configs utils graph.py handler.py dist/
-          cd dist
-          zip -r ../lambda.zip .
-          cd ..
-          aws lambda update-function-code --function-name propgenie-agent-dev --zip-file fileb://lambda.zip
+
 
       # Step 4: Build & Sync Frontend
       - name: Deploy Frontend to S3 & CloudFront Invalidation

@@ -67,7 +67,9 @@ jobs:
 
   terraform:
     name: Terraform Validate & Plan
+    needs: [frontend, backend]
     runs-on: ubuntu-latest
+    environment: dev
     defaults:
       run:
         working-directory: infra
@@ -78,6 +80,9 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Create Backend Dist Directory
+        run: mkdir -p ../backend/dist
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -97,4 +102,4 @@ jobs:
 
       - name: Terraform Plan
         if: env.AWS_ACCESS_KEY_ID != ''
-        run: terraform plan -var-file=environments/dev.tfvars
+        run: terraform plan -var-file=environments/dev.tfvars -lock=false

@@ -224,3 +224,51 @@ def test_orchestrator_budget_normalization(mock_chat_bedrock: MagicMock, budget_
     updates = orchestrator_node(state)
     assert updates["budget_min"] == expected_min
     assert updates["budget_max"] == expected_max
+
+
+@patch("agents.orchestrator.ChatBedrock")
+def test_orchestrator_state_reset_when_switching_context(mock_chat_bedrock: MagicMock) -> None:
+    """
+    Verifies that state fields are correctly reset (e.g. bhk is set to None when switching
+    from apartment to plot search) instead of carrying over from the previous state.
+    """
+    mock_instance = MagicMock()
+    mock_msg = MagicMock()
+    mock_msg.content = json.dumps({
+        "intent": "Buy",
+        "city": "Bangalore",
+        "location_anchor": "Indiranagar",
+        "property_type": "plot",
+        "bhk": None,
+        "budget_min": 10000000,
+        "budget_max": 40000000,
+        "radius_km": None
+    })
+    mock_instance.invoke.return_value = mock_msg
+    mock_chat_bedrock.return_value = mock_instance
+
+    # Set up initial state carrying over previous turn's apartment search parameters
+    state = get_initial_state("session-switch-context", "127.0.0.1")
+    state["intent"] = "Rent"
+    state["city"] = "Bangalore"
+    state["location_anchor"] = "Indiranagar"
+    state["property_type"] = "apartment"
+    state["bhk"] = 3
+    state["budget_min"] = 30000
+    state["budget_max"] = 50000
+
+    state["messages"].append({
+        "role": "user",
+        "content": "buy plot in Indiranagar, Bangalore between 1cr to 4cr"
+    })
+
+    # Execute orchestrator node
+    updates = orchestrator_node(state)
+
+    # Assertions: bhk must be None, property_type must be plot
+    assert updates["property_type"] == "plot"
+    assert updates["bhk"] is None
+    assert updates["intent"] == "Buy"
+    assert updates["budget_min"] == 10000000
+    assert updates["budget_max"] == 40000000
+

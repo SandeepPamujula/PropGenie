@@ -37,6 +37,7 @@ describe('api', () => {
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
           'X-Session-ID': 'test-session-id',
+          'x-amz-content-sha256': '9b2d43affbf49a367028df2e1414f84c0e099ac98c3d54a8a80157fd7771af25',
         },
         body: JSON.stringify({ message: 'hello' }),
       }),

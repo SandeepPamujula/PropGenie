@@ -11,15 +11,34 @@ terraform {
   }
 }
 
-# Create a dummy zip file for bootstrapping the Lambda function
-data "archive_file" "dummy" {
-  type        = "zip"
-  output_path = "${path.module}/dummy_lambda.zip"
-
-  source {
-    content  = "def lambda_handler(event, context):\n    return {'statusCode': 200, 'body': 'Bootstrap'}"
-    filename = "handler.py"
+# 1. Prepare backend dist directory using python script (runs cross-platform)
+resource "null_resource" "prepare_backend_dist" {
+  triggers = {
+    requirements = filesha256("${path.root}/../backend/requirements.txt")
+    always_run   = timestamp()
   }
+
+  provisioner "local-exec" {
+    working_dir = "${path.root}/.."
+    command     = "python backend/scripts/prepare_dist.py"
+  }
+}
+
+# 2. Archive the prepared build directory containing code and dependencies (deferred to apply phase)
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  output_path = "${path.module}/lambda_backend.zip"
+  source_dir  = "${path.root}/../backend/dist"
+
+  depends_on = [null_resource.prepare_backend_dist]
+}
+
+# 3. Upload zip to S3 (since the package exceeds AWS Lambda direct upload size limits)
+resource "aws_s3_object" "lambda_zip_upload" {
+  bucket     = "propgenie-terraform-state"
+  key        = "lambda_packages/lambda_backend_${var.environment}.zip"
+  source     = data.archive_file.lambda_zip.output_path
+  etag       = data.archive_file.lambda_zip.output_md5
 }
 
 # IAM Execution Role for Lambda
@@ -55,7 +74,9 @@ resource "aws_iam_policy" "lambda_policy" {
           "bedrock:InvokeModelWithResponseStream"
         ]
         Resource = [
-          "arn:aws:bedrock:*::foundation-model/meta.llama3-1-70b-instruct-*"
+          "arn:aws:bedrock:*::foundation-model/meta.llama3-1-70b-instruct-*",
+          "arn:aws:bedrock:*::foundation-model/us.meta.llama3-1-70b-instruct-*",
+          "arn:aws:bedrock:*:*:inference-profile/us.meta.llama3-1-70b-instruct-*"
         ]
       },
       {
@@ -89,8 +110,9 @@ resource "aws_lambda_function" "agent" {
   timeout                        = var.lambda_timeout
   reserved_concurrent_executions = var.reserved_concurrent_executions
 
-  filename         = data.archive_file.dummy.output_path
-  source_code_hash = data.archive_file.dummy.output_base64sha256
+  s3_bucket        = aws_s3_object.lambda_zip_upload.bucket
+  s3_key           = aws_s3_object.lambda_zip_upload.key
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
   environment {
     variables = {
@@ -100,22 +122,21 @@ resource "aws_lambda_function" "agent" {
       LANGFUSE_BASE_URL   = var.langfuse_base_url
       LANGFUSE_HOST       = var.langfuse_base_url
       ENVIRONMENT         = var.environment
+      BEDROCK_REGION      = "us-east-1"
+      BEDROCK_MODEL_ID    = "us.meta.llama3-1-70b-instruct-v1:0"
     }
   }
 
   lifecycle {
-    # Ignore changes to code zip updated in CI/CD deployment
-    ignore_changes = [
-      filename,
-      source_code_hash
-    ]
+    # Allow Terraform to update the Lambda when the code zip changes
+    ignore_changes = []
   }
 }
 
-# Configure Lambda Function URL with AWS_IAM auth type and RESPONSE_STREAM mode
+# Configure Lambda Function URL with AWS_IAM auth type and BUFFERED mode
 resource "aws_lambda_function_url" "agent_url" {
   function_name      = aws_lambda_function.agent.function_name
   authorization_type = "AWS_IAM"
-  invoke_mode        = "RESPONSE_STREAM"
+  invoke_mode        = "BUFFERED"
 }
 

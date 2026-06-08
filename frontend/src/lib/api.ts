@@ -1,8 +1,25 @@
 import { getSessionId, resetSessionId } from './session'
 
 const isDev = process.env.NODE_ENV === 'development'
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || (isDev ? 'http://localhost:8000' : '')
+
+const getApiBaseUrl = (): string => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')
+
+    if (!isLocalHost) {
+      // Remote deployment (e.g. CloudFront/S3) should always use relative paths
+      // so CloudFront handles Origin routing to the Lambda function.
+      return ''
+    }
+  }
+
+  return envUrl || (isDev ? 'http://localhost:8000' : '')
+}
+
+export const API_BASE_URL = getApiBaseUrl()
 
 export class SessionExpiredError extends Error {
   constructor(message = 'Session has expired') {
@@ -28,6 +45,17 @@ export class RateLimitError extends Error {
  */
 export async function sendMessage(message: string): Promise<ReadableStream<Uint8Array>> {
   const sessionId = getSessionId()
+  const bodyString = JSON.stringify({ message })
+
+  // Compute SHA-256 hash of body for AWS SigV4 / CloudFront OAC verification on POST requests
+  let contentSha256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' // empty body SHA-256
+  if (bodyString) {
+    const encoder = new TextEncoder()
+    const data = encoder.encode(bodyString)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    contentSha256 = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+  }
 
   const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: 'POST',
@@ -35,8 +63,9 @@ export async function sendMessage(message: string): Promise<ReadableStream<Uint8
       'Content-Type': 'application/json',
       Accept: 'text/event-stream',
       'X-Session-ID': sessionId,
+      'x-amz-content-sha256': contentSha256,
     },
-    body: JSON.stringify({ message }),
+    body: bodyString,
   })
 
   if (response.status === 404) {
